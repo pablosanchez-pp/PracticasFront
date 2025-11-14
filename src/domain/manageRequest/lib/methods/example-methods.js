@@ -1,8 +1,4 @@
 export const EXAMPLE_METHODS = {
-  
-  getComerces: (response) => {
-    
-    return response
-  },
-  
+  getComerces: (response) => response,
+  getClients: (response) => response,
 };

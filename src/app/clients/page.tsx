@@ -1,37 +1,41 @@
 'use client';
+
 import { useEffect, useState } from 'react';
-import { http } from '@/service/src/httpClient';
-
-interface Client {
-  id: string;
-  name: string;
-  surname: string;
-  email: string;
-}
-
-const API = process.env.NEXT_PUBLIC_API_CLIENT!;
+import { getClients } from '@/service/src/application/queries/getClients';
+import type { Client } from '@/domain/client';
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [error, setError] = useState<string>();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    http<Client[]>(API)
-      .then(setClients)
-      .catch((err) => setError(err.message));
+    getClients()
+      .then((data) => setClients(data))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : 'Error desconocido'),
+      )
+      .finally(() => setLoading(false));
   }, []);
 
+  if (loading) return <p>Cargando clientes...</p>;
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (!clients.length) return <p>No hay clientes.</p>;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Clientes</h1>
       <table border={1}>
         <thead>
-          <tr><th>ID</th><th>Nombre</th><th>Apellido</th><th>Email</th></tr>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Email</th>
+          </tr>
         </thead>
         <tbody>
-          {clients.map(c => (
+          {clients.map((c) => (
             <tr key={c.id}>
               <td>{c.id}</td>
               <td>{c.name}</td>

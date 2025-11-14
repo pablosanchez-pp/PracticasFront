@@ -37,7 +37,7 @@ const manageRequest = async (
       cache,
       headers: token
         ? {
-            Authorization: token,
+            Authorization: `Bearer ${token}`,
             Tokenid: token,
             ...headers,
           }
@@ -45,6 +45,7 @@ const manageRequest = async (
     };
 
     let url = QUERIES[requestString](params);
+
     if (mode === 'query') {
       if (typeof params === 'string') {
         url += `?${params}`;
@@ -64,6 +65,7 @@ const manageRequest = async (
     ) {
       fetchConfig['body'] = commonBody ? JSON.stringify(params) : params;
     }
+
     const response = await fetch(url, fetchConfig);
     const responseBody = await response.text();
 
@@ -74,9 +76,10 @@ const manageRequest = async (
         query: requestString,
         status: response.status,
         statusText: response.statusText,
-        body: responseBody && responseType === 'string'
-        ? responseBody
-        : JSON.parse(responseBody),
+        body:
+          responseBody && responseType === 'string'
+            ? responseBody
+            : JSON.parse(responseBody),
       };
     }
 
@@ -87,7 +90,8 @@ const manageRequest = async (
       );
     }
 
-    const responseData = responseType === 'string' ? responseBody : JSON.parse(responseBody);
+    const responseData =
+      responseType === 'string' ? responseBody : JSON.parse(responseBody);
 
     return METHODS[requestString](
       { data: responseData, config: { url, ...fetchConfig } },

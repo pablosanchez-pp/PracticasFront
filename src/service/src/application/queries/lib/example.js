@@ -19,7 +19,7 @@ const exampleUseCases = {
     
     return manageRequest(
       signal,
-      'getComerces',
+      'updateCommerce',
       values,
       'query',
       'normal',
@@ -28,6 +28,19 @@ const exampleUseCases = {
       undefined,
     );
   },
+
+  getClients: (signal, values, token) => {
+    return manageRequest(
+      signal,
+      'getClients',
+      values,
+      'query',
+      'normal',
+      'get',
+      token,
+      undefined,
+    );
+  }
 };
 
 export default exampleUseCases;

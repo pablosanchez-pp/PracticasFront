@@ -1,4 +1,4 @@
-import { exampleDictionary } from "./lib/example";
+import { exampleDictionary } from "./lib";
 
 
 const Dictionary = {

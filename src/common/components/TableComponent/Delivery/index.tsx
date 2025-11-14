@@ -3,8 +3,9 @@
 // import Service from "@/service/src"
 import { FC } from "react"
 import { TableComponentProps } from "./interface"
+import Hola from './components/Hola';
 
-const TableComponent:FC<TableComponentProps> = ({data}) => {
+const TableComponent:FC = () => {
 
     // const signal = new AbortController().signal;
 
@@ -18,12 +19,14 @@ const TableComponent:FC<TableComponentProps> = ({data}) => {
         
     // })
 
-    const columns = []
+    //const columns = []
 
 
-    return <div>
-        <Table/>
+    return (
+    <div>
+      <Hola />
     </div>
-}
+  );
+};
 
-export default TableComponent
+export default TableComponent;

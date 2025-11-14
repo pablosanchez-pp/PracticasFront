@@ -4,11 +4,13 @@ export const EXAMPLE_QUERIES = {
    getComerces: () =>
     `https://localhost:3000/getCommerces`,
   
-  
+  getClients: () =>
+    `http://localhost:8081/api/client/findAll`,
 };
 
 
 export const EXAMPLE_ERROR_MESSAGES = {
   exampleQuery:'error',
-  getComerces:'No hay comercios'
+  getComerces:'No hay comercios',
+  getClients:'No hay clientes'
 }
