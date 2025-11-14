@@ -7,7 +7,6 @@ export async function http<T>(url: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(JWT ? { Authorization: `Bearer ${JWT}` } : {}),
       ...(options?.headers || {}),
     },
   });
