@@ -1,8 +1,6 @@
 'use client'
 
-// import Service from "@/service/src"
 import { FC } from "react"
-import { TableComponentProps } from "./interface"
 import Hola from './components/Hola';
 
 const TableComponent:FC = () => {

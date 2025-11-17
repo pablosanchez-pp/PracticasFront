@@ -1,5 +1,3 @@
-// src/service/src/httpClient.ts
-
 export async function http<T>(
   url: string,
   options: RequestInit = {},
@@ -7,30 +5,27 @@ export async function http<T>(
 ): Promise<T> {
   console.log('FETCH a:', url);
 
-  // método por defecto GET
   const method = (options.method ?? 'GET').toUpperCase();
 
-  // Normalizamos los headers a un objeto simple { [clave]: string }
   const baseHeaders = (options.headers ?? {}) as Record<string, string>;
 
   const headers: Record<string, string> = {
-    ...baseHeaders, // <- aquí el spread correcto
+    ...baseHeaders,
   };
 
-  // Solo metemos Content-Type por defecto si NO es GET
+  
   if (method !== 'GET' && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
-  // Si hay JWT, añadimos Authorization
   if (JWT) {
     headers['Authorization'] = `Bearer ${JWT}`;
   }
 
   const res = await fetch(url, {
-    ...options, // <- aquí también spread
+    ...options,
     method,
-    headers, // <- Record<string,string> es compatible con HeadersInit
+    headers,
   });
 
   if (!res.ok) {
