@@ -38,7 +38,6 @@ const manageRequest = async (
       headers: token
         ? {
             Authorization: `Bearer ${token}`,
-            Tokenid: token,
             ...headers,
           }
         : { ...headers },
