@@ -6,5 +6,4 @@ export const getCommercesDictionary = {
     delete responseBody[key];
     return response;
   },
-  
 };

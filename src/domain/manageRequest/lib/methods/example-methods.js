@@ -7,4 +7,24 @@ export const EXAMPLE_METHODS = {
     }
     return [];
   },
+
+  getClientsByName: (response) => {
+    console.log('METHOD getClientsByName raw response', response);
+
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return [];
+
+  },
+
+  getClientsByEmail: (response) => {
+    console.log('METHOD getClientsByEmail raw response', response);
+
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    return [];
+
+  },
 };
