@@ -1,24 +1,34 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 
-import { Table, Spin, Alert, Typography, Input } from 'antd';
+import { Spin, Alert, Typography, Input, Button, Form } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+
+import { useClients } from './useClients';
+import ClientsTable from './ClientsTable';
 
 const { Title, Paragraph } = Typography;
 
+type NewClientFormValues = Pick<
+  Client,
+  'name' | 'surname' | 'email' | 'phone' | 'cifNifNie'
+>;
+
 const Hola = () => {
-  const [clients, setClients] = useState<Client[]>([]); 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { clients, setClients, loading, setLoading, error, setError } =
+    useClients();
 
   const [nameSearchText, setNameSearchText] = useState('');
   const [emailSearchText, setEmailSearchText] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form] = Form.useForm<NewClientFormValues>();
 
   const handleSearchByName = (term?: string) => {
-    setEmailSearchText('');
+    setEmailSearchText(''); // al buscar por nombre, limpio el email
 
     const jwt = process.env.NEXT_PUBLIC_JWT;
     const name = (term ?? nameSearchText).trim();
@@ -57,7 +67,7 @@ const Hola = () => {
   };
 
   const handleSearchByEmail = (term?: string) => {
-    setNameSearchText('');
+    setNameSearchText(''); // al buscar por email, limpio el nombre
 
     const jwt = process.env.NEXT_PUBLIC_JWT;
     const email = (term ?? emailSearchText).trim();
@@ -84,6 +94,7 @@ const Hola = () => {
         if (err?.name === 'AbortError') return;
         console.error('ERROR EN getClientsByEmail:', err);
 
+        // si tu backend devuelve 500 cuando no hay resultado
         if (err?.status === 500) {
           setClients([]);
           setError(null);
@@ -99,6 +110,48 @@ const Hola = () => {
         setError(errorMessage);
       })
       .finally(() => setLoading(false));
+  };
+
+  const handleCreateClient = (values: NewClientFormValues) => {
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    setError(null);
+    setCreating(true);
+
+    Service.getCases('createClient', {
+      signal,
+      endPointData: values, // { name, surname, email, phone, cifNifNie }
+      token: jwt,
+    })
+      .then(() => {
+        // después de crear, recargamos toda la lista de clientes
+        return Service.getCases('getClients', {
+          signal,
+          endPointData: {},
+          token: jwt,
+        });
+      })
+      .then((res) => {
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
+        form.resetFields();
+        setShowCreateForm(false);
+      })
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return;
+        console.error('ERROR EN createClient:', err);
+
+        const errorMessage =
+          err?.body?.message ||
+          err?.body?.error ||
+          err?.statusText ||
+          'Ha ocurrido un error al crear el cliente';
+
+        setError(errorMessage);
+      })
+      .finally(() => setCreating(false));
   };
 
   const columns: ColumnsType<Client> = [
@@ -150,52 +203,28 @@ const Hola = () => {
     { title: 'Estado', dataIndex: 'status', key: 'status' },
   ];
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    setLoading(true);
-    setError(null);
-
-    Service.getCases('getClients', {
-      signal,
-      endPointData: {},
-      token: process.env.NEXT_PUBLIC_JWT,
-    })
-      .then((res) => {
-        const lista = Array.isArray(res) ? (res as Client[]) : [];
-        setClients(lista);
-      })
-      .catch((err: any) => {
-        if (err?.name === 'AbortError') return;
-        console.error('ERROR EN getClients:', err);
-
-        const errorMessage =
-          err?.body?.message ||
-          err?.body?.error ||
-          err?.statusText ||
-          'Ha ocurrido un error al cargar los clientes';
-
-        setError(errorMessage);
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, []);
-
   return (
     <section className="space-y-4">
-      {/* Cabecera */}
-      <div>
-        <Title
-          level={2}
-          style={{ marginBottom: 4, color: '#ffffff' }}
+      {/* Cabecera + botón crear */}
+      <div className="flex items-center justify-between">
+        <div>
+          <Title
+            level={2}
+            style={{ marginBottom: 4, color: '#ffffff' }}
+          >
+            Clientes
+          </Title>
+          <Paragraph type="secondary" style={{ margin: 0, color: '#ffffff' }}>
+            Listado de clientes obtenidos del microservicio.
+          </Paragraph>
+        </div>
+
+        <Button
+          type="primary"
+          onClick={() => setShowCreateForm((prev) => !prev)}
         >
-          Clientes
-        </Title>
-        <Paragraph type="secondary" style={{ margin: 0, color: '#ffffff' }}>
-          Listado de clientes obtenidos del microservicio.
-        </Paragraph>
+          {showCreateForm ? 'Cancelar' : 'Nuevo cliente'}
+        </Button>
       </div>
 
       {/* Error */}
@@ -208,6 +237,56 @@ const Hola = () => {
         />
       )}
 
+      {/* Formulario crear cliente */}
+      {showCreateForm && (
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <Typography.Title level={4} style={{ marginBottom: 16 }}>
+            Crear cliente
+          </Typography.Title>
+
+          <Form<NewClientFormValues>
+            form={form}
+            layout="inline"
+            onFinish={handleCreateClient}
+          >
+            <Form.Item
+              name="name"
+              rules={[{ required: true, message: 'Introduce el nombre' }]}
+            >
+              <Input placeholder="Nombre" />
+            </Form.Item>
+
+            <Form.Item
+              name="surname"
+              rules={[{ required: true, message: 'Introduce los apellidos' }]}
+            >
+              <Input placeholder="Apellidos" />
+            </Form.Item>
+
+            <Form.Item
+              name="email"
+              rules={[{ required: true, message: 'Introduce el email' }]}
+            >
+              <Input placeholder="Email" />
+            </Form.Item>
+
+            <Form.Item name="phone">
+              <Input placeholder="Teléfono" />
+            </Form.Item>
+
+            <Form.Item name="cifNifNie">
+              <Input placeholder="CIF/NIF/NIE" />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={creating}>
+                Guardar
+              </Button>
+            </Form.Item>
+          </Form>
+        </div>
+      )}
+
       {/* Tabla dentro de una tarjeta blanca */}
       <div className="bg-white rounded-xl overflow-hidden shadow-sm">
         {loading ? (
@@ -215,13 +294,7 @@ const Hola = () => {
             <Spin tip="Cargando clientes..." />
           </div>
         ) : (
-          <Table<Client>
-            rowKey="email"
-            columns={columns}
-            dataSource={clients}
-            locale={{ emptyText: 'No hay clientes.' }}
-            pagination={false}
-          />
+          <ClientsTable clients={clients} columns={columns} />
         )}
       </div>
     </section>

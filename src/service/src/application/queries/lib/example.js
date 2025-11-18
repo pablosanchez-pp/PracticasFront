@@ -1,8 +1,8 @@
 import manageRequest from '@/domain/manageRequest';
 
 const clientUseCases = {
-  getClients: (signal, values, token) => {
-    return manageRequest(
+  getClients: (signal, values, token) =>
+    manageRequest(
       signal,
       'getClients',
       values,
@@ -11,34 +11,44 @@ const clientUseCases = {
       'get',
       token,
       undefined,
-    );
-  },
+    ),
 
-  getClientsByName: (signal, values, token) => {
-    return manageRequest(
+  getClientsByName: (signal, values, token) =>
+    manageRequest(
       signal,
-      'getClientsByName', 
+      'getClientsByName',
       values,
-      'query', 
+      'query',
       'normal',
       'get',
       token,
       undefined,
-    );
-  },
+    ),
 
-  getClientsByEmail: (signal, values, token) => {
-    return manageRequest(
+  getClientsByEmail: (signal, values, token) =>
+    manageRequest(
       signal,
-      'getClientsByEmail', 
+      'getClientsByEmail',
       values,
-      'query', 
+      'query',
       'normal',
       'get',
       token,
       undefined,
-    );
-  },
+    ),
+
+  createClient: (signal, values, token) =>
+    manageRequest(
+      signal,
+      'createClient',       
+      values,                     
+      'normal',             
+      'normal',               
+      'post',                     
+      token,
+      undefined,                  
+      { 'Content-Type': 'application/json' }, 
+    ),
 };
 
 export default clientUseCases;

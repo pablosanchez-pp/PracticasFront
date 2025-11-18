@@ -28,4 +28,10 @@ export const EXAMPLE_METHODS = {
 
     return [data];
   },
+
+  createClient: (response) => {
+    console.log('METHOD createClient raw response', response);
+
+    return response.data ?? null;
+  },
 };

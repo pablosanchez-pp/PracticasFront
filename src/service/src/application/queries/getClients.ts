@@ -40,3 +40,22 @@ export async function getClientsByEmail(email: string): Promise<Client[]> {
     jwt
   );
 }
+
+
+export type NewClient = Pick<Client, 'name' | 'surname' | 'email' | 'phone' | 'cifNifNie'>;
+
+export async function createClient(data: NewClient): Promise<Client> {
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+
+  return http<Client>(
+    'http://localhost:8081/api/client',     
+    {
+      method: 'POST',
+      body: JSON.stringify(data),          
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    jwt,
+  );
+}
