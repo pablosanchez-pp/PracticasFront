@@ -4,22 +4,22 @@ import { useEffect, useState } from 'react';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 
-import { Table, Spin, Alert, Typography, Input, Button } from 'antd';
+import { Table, Spin, Alert, Typography, Input } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined } from '@ant-design/icons';
 
 const { Title, Paragraph } = Typography;
 
 const Hola = () => {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<Client[]>([]); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [showNameSearch, setShowNameSearch] = useState(false);
   const [nameSearchText, setNameSearchText] = useState('');
+  const [emailSearchText, setEmailSearchText] = useState('');
 
-  // 👉 ahora acepta un término opcional
   const handleSearchByName = (term?: string) => {
+    setEmailSearchText('');
+
     const jwt = process.env.NEXT_PUBLIC_JWT;
     const name = (term ?? nameSearchText).trim();
 
@@ -43,7 +43,52 @@ const Hola = () => {
       })
       .catch((err: any) => {
         if (err?.name === 'AbortError') return;
-        console.error('ERROR EN getClients:', err);
+        console.error('ERROR EN getClientsByName:', err);
+
+        const errorMessage =
+          err?.body?.message ||
+          err?.body?.error ||
+          err?.statusText ||
+          'Ha ocurrido un error al cargar los clientes';
+
+        setError(errorMessage);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  const handleSearchByEmail = (term?: string) => {
+    setNameSearchText('');
+
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const email = (term ?? emailSearchText).trim();
+
+    setError(null);
+    setLoading(true);
+
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const serviceName = email ? 'getClientsByEmail' : 'getClients';
+    const endPointData = email ? { email } : {};
+
+    Service.getCases(serviceName, {
+      signal,
+      endPointData,
+      token: jwt,
+    })
+      .then((res) => {
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
+      })
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return;
+        console.error('ERROR EN getClientsByEmail:', err);
+
+        if (err?.status === 500) {
+          setClients([]);
+          setError(null);
+          return;
+        }
 
         const errorMessage =
           err?.body?.message ||
@@ -60,43 +105,46 @@ const Hola = () => {
     {
       title: (
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span>Nombre</span>
-            <SearchOutlined
-              style={{ fontSize: 14, cursor: 'pointer' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!showNameSearch) {
-                  setShowNameSearch(true);
-                } else if (nameSearchText.trim()) {
-                  handleSearchByName();
-                }
-              }}
-            />
-          </div>
-
-          {showNameSearch && (
-            <Input
-              size="small"
-              placeholder="Escribe un nombre y pulsa Enter..."
-              value={nameSearchText}
-              onChange={(e) => setNameSearchText(e.target.value)}
-              onPressEnter={() => handleSearchByName()}
-              allowClear
-              
-              onClear={() => {
-                setNameSearchText('');
-                handleSearchByName(''); 
-              }}
-            />
-          )}
+          <span>Nombre</span>
+          <Input
+            size="small"
+            placeholder="Escribe un nombre"
+            value={nameSearchText}
+            onChange={(e) => setNameSearchText(e.target.value)}
+            onPressEnter={() => handleSearchByName()}
+            allowClear
+            onClear={() => {
+              setNameSearchText('');
+              handleSearchByName(''); // vuelve a getClients
+            }}
+          />
         </div>
       ),
       dataIndex: 'name',
       key: 'name',
     },
     { title: 'Apellidos', dataIndex: 'surname', key: 'surname' },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
+    {
+      title: (
+        <div className="flex flex-col gap-1">
+          <span>Email</span>
+          <Input
+            size="small"
+            placeholder="Escribe un email"
+            value={emailSearchText}
+            onChange={(e) => setEmailSearchText(e.target.value)}
+            onPressEnter={() => handleSearchByEmail()}
+            allowClear
+            onClear={() => {
+              setEmailSearchText('');
+              handleSearchByEmail(''); // vuelve a getClients
+            }}
+          />
+        </div>
+      ),
+      dataIndex: 'email',
+      key: 'email',
+    },
     { title: 'Teléfono', dataIndex: 'phone', key: 'phone' },
     { title: 'CIF/NIF/NIE', dataIndex: 'cifNifNie', key: 'cifNifNie' },
     { title: 'Estado', dataIndex: 'status', key: 'status' },
@@ -137,31 +185,17 @@ const Hola = () => {
 
   return (
     <section className="space-y-4">
-      {/* Cabecera + botón reiniciar */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Title
-            level={2}
-            style={{ marginBottom: 4, color: '#ffffff' }}
-          >
-            Clientes
-          </Title>
-          <Paragraph type="secondary" style={{ margin: 0, color: '#ffffff' }}>
-            Listado de clientes obtenidos del microservicio.
-          </Paragraph>
-        </div>
-
-        {showNameSearch && nameSearchText.trim().length > 0 && (
-        <Button
-          onClick={() => {
-            setNameSearchText('');
-            setShowNameSearch(false);
-            handleSearchByName('');
-          }}
+      {/* Cabecera */}
+      <div>
+        <Title
+          level={2}
+          style={{ marginBottom: 4, color: '#ffffff' }}
         >
-          Reiniciar
-        </Button>
-        )}
+          Clientes
+        </Title>
+        <Paragraph type="secondary" style={{ margin: 0, color: '#ffffff' }}>
+          Listado de clientes obtenidos del microservicio.
+        </Paragraph>
       </div>
 
       {/* Error */}

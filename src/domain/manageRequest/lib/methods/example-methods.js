@@ -21,10 +21,11 @@ export const EXAMPLE_METHODS = {
   getClientsByEmail: (response) => {
     console.log('METHOD getClientsByEmail raw response', response);
 
-    if (Array.isArray(response.data)) {
-      return response.data;
-    }
-    return [];
+    const data = response.data;
 
+    if (!data) return [];      
+    if (Array.isArray(data)) return data; 
+
+    return [data];
   },
 };

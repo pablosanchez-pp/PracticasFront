@@ -5,7 +5,7 @@ export const EXAMPLE_QUERIES = {
   getClientsByName: () =>
     `http://localhost:8081/api/client/findByName`,
 
-  getClientByEmail: () =>
+  getClientsByEmail: () =>
     `http://localhost:8081/api/client/search/by-email`
 };
 
