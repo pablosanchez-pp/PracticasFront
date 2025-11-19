@@ -9,6 +9,9 @@ export const EXAMPLE_QUERIES = {
     `http://localhost:8081/api/client/search/by-email`,
 
   createClient: () =>
+    `http://localhost:8081/api/client`,
+
+  deleteClient: () =>
     `http://localhost:8081/api/client`
 };
 

@@ -59,3 +59,16 @@ export async function createClient(data: NewClient): Promise<Client> {
     jwt,
   );
 }
+
+
+export async function deleteClient(id: Client['id']): Promise<void> {
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+
+  return http<void>(
+    `http://localhost:8081/api/client/${id}`,
+    {
+      method: 'DELETE',
+    },
+    jwt,
+  );
+}

@@ -49,6 +49,18 @@ const clientUseCases = {
       undefined,                  
       { 'Content-Type': 'application/json' }, 
     ),
+
+   deleteClient: (signal, values, token) =>
+    manageRequest(
+      signal,
+      'deleteClient',       
+      values,                     
+      'normal',             
+      'normal',               
+      'post',                     
+      token,
+      undefined,                  
+    ), 
 };
 
 export default clientUseCases;

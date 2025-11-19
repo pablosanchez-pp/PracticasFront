@@ -9,6 +9,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { useClients } from './useClients';
 import ClientsTable from './ClientsTable';
+import { deleteClient } from '@/service/src/application/queries/getClients';
 
 const { Title, Paragraph } = Typography;
 
@@ -154,7 +155,27 @@ const Hola = () => {
       .finally(() => setCreating(false));
   };
 
-  const columns: ColumnsType<Client> = [
+    const handleDeleteClient = async (id: Client['id']) => {
+    const confirmed = window.confirm('¿Seguro que quieres eliminar este cliente?');
+    if (!confirmed) return;
+
+    try {
+      await deleteClient(id);
+      setClients((prev) => prev.filter((c) => c.id !== id));
+    } catch (err: any) {
+      console.error('ERROR EN deleteClient:', err);
+
+      const errorMessage =
+        err?.body?.message ||
+        err?.body?.error ||
+        err?.statusText ||
+        'Ha ocurrido un error al eliminar el cliente';
+
+      setError(errorMessage);
+    }
+  };
+
+    const columns: ColumnsType<Client> = [
     {
       title: (
         <div className="flex flex-col gap-1">
@@ -201,7 +222,17 @@ const Hola = () => {
     { title: 'Teléfono', dataIndex: 'phone', key: 'phone' },
     { title: 'CIF/NIF/NIE', dataIndex: 'cifNifNie', key: 'cifNifNie' },
     { title: 'Estado', dataIndex: 'status', key: 'status' },
+    {
+      title: 'Acciones',
+      key: 'actions',
+      render: (_text, record) => (
+        <Button danger onClick={() => handleDeleteClient(record.id)}>
+          Eliminar
+        </Button>
+      ),
+    },
   ];
+
 
   return (
     <section className="space-y-4">

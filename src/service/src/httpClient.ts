@@ -1,42 +1,48 @@
 export async function http<T>(
   url: string,
-  options: RequestInit = {},
-  JWT?: string,
+  options: RequestInit,
+  jwt?: string,
 ): Promise<T> {
-  console.log('FETCH a:', url);
-
-  const method = (options.method ?? 'GET').toUpperCase();
-
-  const baseHeaders = (options.headers ?? {}) as Record<string, string>;
-
-  const headers: Record<string, string> = {
-    ...baseHeaders,
+  const config: RequestInit = {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+    },
   };
 
-  
-  if (method !== 'GET' && !headers['Content-Type']) {
-    headers['Content-Type'] = 'application/json';
+  const response = await fetch(url, config);
+
+
+  if (!response.ok) {
+    let errorBody: any = null;
+    try {
+      errorBody = await response.json();
+    } catch {
+      
+    }
+
+    const error: any = new Error(response.statusText || 'HTTP error');
+    error.status = response.status;
+    error.body = errorBody;
+    throw error;
   }
 
-  if (JWT) {
-    headers['Authorization'] = `Bearer ${JWT}`;
+  if (response.status === 204) {
+    return undefined as T;
   }
 
-  const res = await fetch(url, {
-    ...options,
-    method,
-    headers,
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    console.error('RESPUESTA NO OK', res.status, text);
-    throw new Error(`HTTP ${res.status} - ${text || res.statusText}`);
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    return text as T;
   }
 
   try {
-    return (await res.json()) as T;
-  } catch (e: any) {
-    throw new Error(`No se ha podido parsear JSON: ${e?.message ?? e}`);
+    const data = await response.json();
+    return data as T;
+  } catch (e) {
+    console.error(e);
+    throw new Error('No se ha podido parsear JSON: ' + (e as Error).message);
   }
 }

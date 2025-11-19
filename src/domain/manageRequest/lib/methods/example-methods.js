@@ -34,4 +34,13 @@ export const EXAMPLE_METHODS = {
 
     return response.data ?? null;
   },
+
+  deleteClient: (response) => {
+    console.log('METHOD deleteClient raw response', response);
+
+    if (response?.status === 200 || response?.status === 204) {
+      return true;
+    }
+    return false;
+  },
 };
