@@ -61,6 +61,19 @@ const clientUseCases = {
       token,
       undefined,                  
     ), 
+
+  updateClient: (signal, values, token) =>
+    manageRequest(
+      signal,
+      'updateClient',        
+      values,                  
+      'normal',
+      'normal',
+      'put',        
+      token,
+      undefined,
+      { 'Content-Type': 'application/json' },
+    ),
 };
 
 export default clientUseCases;

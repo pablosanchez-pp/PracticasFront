@@ -31,7 +31,7 @@ export default function RootLayout({
         className={`
           ${geistSans.variable} 
           ${geistMono.variable} 
-          bg-slate-950 
+          bg-slate-800 
           text-slate-100 
           antialiased
         `}
@@ -44,14 +44,19 @@ export default function RootLayout({
             </Link>
 
             <nav className="flex gap-4 text-sm text-slate-300">
-              <Link href="/" className="hover:text-blue-400 transition">
+              <Link
+                href="/"
+                className="hover:text-blue-400 transition"
+              >
                 Inicio
               </Link>
             </nav>
           </header>
 
           {/* Contenido de cada página */}
-          <main className="flex-1 py-4">{children}</main>
+          <main className="flex-1 py-4">
+            {children}
+          </main>
 
           {/* Pie de página sencillo */}
           <footer className="border-t border-slate-800 pt-3 text-xs text-slate-400">

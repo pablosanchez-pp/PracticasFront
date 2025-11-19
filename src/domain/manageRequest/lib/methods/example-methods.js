@@ -43,4 +43,10 @@ export const EXAMPLE_METHODS = {
     }
     return false;
   },
+
+  updateClient: (response) => {
+  console.log('METHOD updateClient raw response', response);
+
+  return response.data ?? null;
+},
 };

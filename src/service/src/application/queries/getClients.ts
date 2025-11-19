@@ -71,4 +71,23 @@ export async function deleteClient(id: Client['id']): Promise<void> {
     },
     jwt,
   );
+
+}
+export type UpdateClient = Pick<Client,'id' | 'name' | 'surname' | 'email' | 'phone' | 'cifNifNie'>;
+
+
+export async function updateClient(data: UpdateClient): Promise<Client> {
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+
+  return http<Client>(
+    `http://localhost:8081/api/client/${data.id}`, // PUT /api/client/{id}
+    {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+    jwt,
+  );
 }
