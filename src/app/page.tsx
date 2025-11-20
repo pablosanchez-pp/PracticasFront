@@ -20,7 +20,7 @@ export default function HomePage() {
       </div>
 
       <div className="flex gap-3">
-        <Link href="">
+        <Link href="/merchants">
           <Button type="primary">Mercados</Button>
         </Link>
       </div>

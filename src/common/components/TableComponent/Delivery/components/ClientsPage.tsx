@@ -9,10 +9,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { useClients } from './useClients';
 import ClientsTable from './ClientsTable';
-import {
-  deleteClient,
-  updateClient,
-} from '@/service/src/application/queries/getClients';
+import {deleteClient,updateClient} from '@/service/src/application/queries/getClients';
 
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 

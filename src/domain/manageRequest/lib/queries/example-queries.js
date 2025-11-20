@@ -15,14 +15,29 @@ export const EXAMPLE_QUERIES = {
     `http://localhost:8081/api/client`,
 
   updateClient: () =>
-    `http://localhost:8081/api/client`
+    `http://localhost:8081/api/client`,
+
+  getMerchants: () =>
+    `http://localhost:8082/api/merchant/findAll`,
+
+  getMerchantsByName: () =>
+    `http://localhost:8082/api/merchant/nombre`,
+
+  createMerchant: () =>
+    `http://localhost:8082/api/merchant`,
+
+  updateMerchant: () =>
+    `http://localhost:8082/api/merchant`,
+
+  deleteMerchant: () =>
+    `http://localhost:8082/api/merchant`
 };
-
-
 
 
 export const EXAMPLE_ERROR_MESSAGES = {
     getClients:'No hay clientes',
     getClientsByName: 'No hay coincidencias con ese nombre',
-    getClientsByEmail: 'No hay coincidencias con ese email'
+    getClientsByEmail: 'No hay coincidencias con ese email',
+    getMerchants: 'No hay merchants',
+    getMerchantsByName: 'No hay coincidencias con ese nombre',
 }

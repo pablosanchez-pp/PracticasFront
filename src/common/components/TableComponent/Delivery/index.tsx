@@ -1,7 +1,7 @@
 'use client'
 
 import { FC } from "react"
-import Hola from './components/Hola';
+import Hola from './components/ClientsPage';
 
 
 const TableComponent:FC = () => {
