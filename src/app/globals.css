@@ -24,7 +24,14 @@ body {
   .text-balance {
     text-wrap: balance;
   }
-  
+
 }
 
+.ant-table {
+  background-color: #ffffff !important;
+}
 
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td {
+  background-color: #ffffff !important;
+}

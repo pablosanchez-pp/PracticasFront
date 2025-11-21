@@ -74,6 +74,31 @@ const clientUseCases = {
       undefined,
       { 'Content-Type': 'application/json' },
     ),
+
+  listMerchants: (signal, values, token) =>
+    manageRequest(
+      signal,
+      'listMerchants',   
+      values,        
+      'normal',
+      'normal',
+      'get',
+      token,
+      undefined,
+    ),
+
+
+  link: (signal, values, token) =>
+    manageRequest(
+      signal,
+      'link',       
+      values,         
+      'normal',
+      'normal',
+      'post',
+      token,
+      undefined,
+    ),
 };
 
 export default clientUseCases;

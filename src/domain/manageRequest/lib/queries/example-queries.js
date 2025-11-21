@@ -30,7 +30,13 @@ export const EXAMPLE_QUERIES = {
     `http://localhost:8082/api/merchant`,
 
   deleteMerchant: () =>
-    `http://localhost:8082/api/merchant`
+    `http://localhost:8082/api/merchant`,
+
+  link: () =>
+    `http://localhost:8081/api/client/{clientId}/merchants/{merchantId}`,
+
+  listMerchants: () =>
+    `http://localhost:8081/api/client/{clientId}/merchants`
 };
 
 

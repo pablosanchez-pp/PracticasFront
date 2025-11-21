@@ -90,4 +90,34 @@ export async function updateClient(data: UpdateClient): Promise<Client> {
     },
     jwt,
   );
+
+}
+
+export async function listMerchantsOfClient(
+  clientId: string,
+): Promise<string[]> {
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+
+  return http<string[]>(
+    `http://localhost:8081/api/client/${clientId}/merchants`,
+    {
+      method: 'GET',
+    },
+    jwt,
+  );
+}
+
+export async function linkClientToMerchant(
+  clientId: string,
+  merchantId: string,
+): Promise<void> {
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+
+  return http<void>(
+    `http://localhost:8081/api/client/${clientId}/merchants/${merchantId}`,
+    {
+      method: 'POST',
+    },
+    jwt,
+  );
 }

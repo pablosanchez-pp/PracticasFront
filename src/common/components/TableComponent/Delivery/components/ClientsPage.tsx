@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
+import type { Merchant } from '@/domain/merchant';
 
 import {
   Spin,
@@ -13,6 +14,7 @@ import {
   Form,
   Tooltip,
   Modal,
+  Select,   // ⬅️ IMPORTANTE
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -21,9 +23,17 @@ import ClientsTable from './ClientsTable';
 import {
   deleteClient,
   updateClient,
+  listMerchantsOfClient,      // ⬅️ ya lo añadimos antes en getClients.ts
+  linkClientToMerchant,       // ⬅️ idem
 } from '@/service/src/application/queries/getClients';
 
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { getMerchants } from '@/service/src/application/queries/getMerchants'; // ⬅️ para cargar todos los merchants
+
+import {
+  DeleteOutlined,
+  EditOutlined,
+  ApartmentOutlined,          // ⬅️ icono para merchants
+} from '@ant-design/icons';
 
 const { Title } = Typography;
 
@@ -47,6 +57,20 @@ const Hola = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const [exampleIndex, setExampleIndex] = useState(1);
+
+  // --------- ESTADO PARA MODAL DE MERCHANTS ---------
+  const [merchantsModalOpen, setMerchantsModalOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  const [clientMerchants, setClientMerchants] = useState<string[]>([]);
+  const [loadingClientMerchants, setLoadingClientMerchants] = useState(false);
+
+  const [allMerchants, setAllMerchants] = useState<Merchant[]>([]);
+  const [loadingAllMerchants, setLoadingAllMerchants] = useState(false);
+
+  const [selectedMerchantId, setSelectedMerchantId] = useState<string | undefined>();
+  const [linkingMerchant, setLinkingMerchant] = useState(false);
+  // --------------------------------------------------
 
   const handleSearchByName = (term?: string) => {
     setEmailSearchText(''); // al buscar por nombre, limpio el email
@@ -268,6 +292,74 @@ const Hola = () => {
     setExampleIndex((prev) => prev + 1);
   };
 
+  // ---------- FUNCIONES PARA MERCHANTS ----------
+  const loadClientMerchants = async (clientId: string) => {
+    try {
+      setLoadingClientMerchants(true);
+      const merchantsIds = await listMerchantsOfClient(clientId);
+      setClientMerchants(merchantsIds);
+    } catch (err: any) {
+      console.error('ERROR EN listMerchantsOfClient:', err);
+      const errorMessage =
+        err?.body?.message ||
+        err?.body?.error ||
+        err?.statusText ||
+        'Ha ocurrido un error al cargar los merchants del cliente';
+      setError(errorMessage);
+    } finally {
+      setLoadingClientMerchants(false);
+    }
+  };
+
+  const loadAllMerchants = async () => {
+    try {
+      setLoadingAllMerchants(true);
+      const merchants = await getMerchants();
+      setAllMerchants(merchants);
+    } catch (err: any) {
+      console.error('ERROR EN getMerchants:', err);
+      const errorMessage =
+        err?.message || 'Ha ocurrido un error al cargar todos los merchants';
+      setError(errorMessage);
+    } finally {
+      setLoadingAllMerchants(false);
+    }
+  };
+
+  const openMerchantsModal = async (client: Client) => {
+    setSelectedClient(client);
+    setMerchantsModalOpen(true);
+    setClientMerchants([]);
+    setSelectedMerchantId(undefined);
+
+    await Promise.all([
+      loadClientMerchants(client.id),
+      loadAllMerchants(),
+    ]);
+  };
+
+  const handleLinkMerchant = async () => {
+    if (!selectedClient || !selectedMerchantId) return;
+
+    try {
+      setLinkingMerchant(true);
+      await linkClientToMerchant(selectedClient.id, selectedMerchantId);
+      // Recargo los merchants del cliente
+      await loadClientMerchants(selectedClient.id);
+    } catch (err: any) {
+      console.error('ERROR EN linkClientToMerchant:', err);
+      const errorMessage =
+        err?.body?.message ||
+        err?.body?.error ||
+        err?.statusText ||
+        'Ha ocurrido un error al asociar el merchant';
+      setError(errorMessage);
+    } finally {
+      setLinkingMerchant(false);
+    }
+  };
+  // ----------------------------------------------
+
   const columns: ColumnsType<Client> = [
     {
       title: (
@@ -337,6 +429,15 @@ const Hola = () => {
               onClick={() => handleDeleteClient(record.id)}
             />
           </Tooltip>
+
+          <Tooltip title="Ver / asociar merchants">
+            <Button
+              size="small"
+              type="dashed"
+              icon={<ApartmentOutlined />}
+              onClick={() => openMerchantsModal(record)}
+            />
+          </Tooltip>
         </div>
       ),
     },
@@ -344,8 +445,7 @@ const Hola = () => {
 
   return (
     <section
-      className="space-y-4 min-h-screen p-6"
-      style={{ backgroundColor: 'bg-slate-800' }}
+      className="space-y-4 min-h-screen p-6 bg-slate-800 overflow-hidden"
     >
       {/* Cabecera + botón crear */}
       <div className="flex items-center justify-between">
@@ -380,7 +480,7 @@ const Hola = () => {
       )}
 
       {/* Tabla dentro de una tarjeta blanca */}
-      <div className="bg-white rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl overflow-hidden shadow-sm w-full">
         {loading ? (
           <div className="flex justify-center py-10">
             <Spin tip="Cargando clientes..." />
@@ -402,14 +502,18 @@ const Hola = () => {
         footer={null}
         destroyOnClose
       >
-        {/* NUEVO: botón dentro del modal */}
+        {/* botón dentro del modal */}
         <div className="mb-4 flex justify-end">
           <Button type="dashed" onClick={handleFillExample}>
             Rellenar datos de ejemplo
           </Button>
         </div>
 
-        <Form<ClientFormValues> form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form<ClientFormValues>
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+        >
           <Form.Item
             name="name"
             label="Nombre"
@@ -456,6 +560,83 @@ const Hola = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal para ver/asociar merchants */}
+      <Modal
+        open={merchantsModalOpen}
+        title={
+          selectedClient
+            ? `Merchants de ${selectedClient.name}`
+            : 'Merchants del cliente'
+        }
+        onCancel={() => {
+          setMerchantsModalOpen(false);
+          setSelectedClient(null);
+          setClientMerchants([]);
+          setSelectedMerchantId(undefined);
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        {loadingClientMerchants ? (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <Spin tip="Cargando merchants del cliente..." />
+          </div>
+        ) : (
+          <>
+            <p>
+              <strong>Merchants asociados:</strong>
+            </p>
+            {clientMerchants.length > 0 ? (
+              <ul style={{ paddingLeft: 18, marginBottom: 16 }}>
+                {clientMerchants.map((mId) => {
+                  const merchant = allMerchants.find((m) => m.id === mId);
+                  return (
+                    <li key={mId}>{merchant ? merchant.name : mId}</li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p>No hay merchants asociados a este cliente.</p>
+            )}
+
+            <hr style={{ margin: '16px 0' }} />
+
+            <p>
+              <strong>Asociar nuevo merchant</strong>
+            </p>
+
+            {loadingAllMerchants ? (
+              <Spin tip="Cargando lista de merchants..." />
+            ) : (
+              <>
+                <Select
+                  placeholder="Selecciona un merchant"
+                  value={selectedMerchantId}
+                  onChange={(value) => setSelectedMerchantId(value)}
+                  style={{ width: '100%', marginBottom: 8 }}
+                  options={allMerchants.map((m) => ({
+                    value: m.id,
+                    label: m.name
+                  }))}
+                  showSearch
+                  optionFilterProp="label"
+                />
+
+                <Button
+                  type="primary"
+                  onClick={handleLinkMerchant}
+                  loading={linkingMerchant}
+                  disabled={!selectedMerchantId}
+                  block
+                >
+                  Asociar merchant
+                </Button>
+              </>
+            )}
+          </>
+        )}
       </Modal>
     </section>
   );

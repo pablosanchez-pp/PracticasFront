@@ -88,4 +88,23 @@ export const EXAMPLE_METHODS = {
     }
     return false;
   },
+
+  listMerchants: (response) => {
+    console.log('METHOD listMerchants raw response', response);
+
+    const data = response.data;
+    if (Array.isArray(data)) {
+      return data;      
+    }
+    return [];
+  },
+
+  link: (response) => {
+    console.log('METHOD link raw response', response);
+
+    if (response?.status === 204 || response?.status === 200) {
+      return true;
+    }
+    return false;
+  },
 };
