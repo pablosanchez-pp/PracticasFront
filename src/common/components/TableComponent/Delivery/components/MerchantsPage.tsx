@@ -40,6 +40,9 @@ const MerchantsPage: React.FC = () => {
   const [editingMerchant, setEditingMerchant] = useState<Merchant | null>(null);
   const [form] = Form.useForm<MerchantFormValues>();
 
+  // contador para los datos de ejemplo
+  const [exampleIndex, setExampleIndex] = useState(1);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     searchByName(value);
@@ -49,6 +52,7 @@ const MerchantsPage: React.FC = () => {
     setEditingMerchant(null);
     form.resetFields();
     setIsModalOpen(true);
+    setExampleIndex(1); // opcional: resetea el contador al crear
   };
 
   const openEditModal = (merchant: Merchant) => {
@@ -94,11 +98,25 @@ const MerchantsPage: React.FC = () => {
       if (err?.errorFields) return;
       setError(err?.message ?? 'Error saving merchant');
     }
+  };    
+
+  // Rellenar datos de ejemplo en el formulario del modal
+  const handleFillExample = () => {
+    const index = exampleIndex;
+
+    form.setFieldsValue({
+      name: `merchantEjemplo${index}`,
+      address: `Direccion ejemplo ${index}`,
+      // coge el primer tipo de la lista, si existe
+      merchantType: (MERCHANT_TYPES[0]?.value as string) ?? '',
+    });
+
+    setExampleIndex((prev) => prev + 1);
   };
 
   return (
     <div>
-      {/* 👇 título en blanco */}
+      {/* título en blanco */}
       <Title level={2} style={{ color: 'white' }}>
         Merchants
       </Title>
@@ -117,7 +135,7 @@ const MerchantsPage: React.FC = () => {
           onChange={handleSearchChange}
         />
         <Button type="primary" onClick={openCreateModal}>
-          New merchant
+          Nuevo merchant
         </Button>
       </div>
 
@@ -143,6 +161,13 @@ const MerchantsPage: React.FC = () => {
         onOk={handleModalOk}
         destroyOnClose
       >
+        {/* Botón para rellenar datos de ejemplo */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <Button type="dashed" onClick={handleFillExample}>
+            Rellenar datos de ejemplo
+          </Button>
+        </div>
+
         <Form form={form} layout="vertical">
           <Form.Item
             label="Name"

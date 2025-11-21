@@ -1,19 +1,31 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 
-import {Spin,Alert,Typography,Input,Button,Form,Tooltip,Modal,Pagination} from 'antd';
+import {
+  Spin,
+  Alert,
+  Typography,
+  Input,
+  Button,
+  Form,
+  Tooltip,
+  Modal,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import { useClients } from './useClients';
 import ClientsTable from './ClientsTable';
-import {deleteClient,updateClient} from '@/service/src/application/queries/getClients';
+import {
+  deleteClient,
+  updateClient,
+} from '@/service/src/application/queries/getClients';
 
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 
-const { Title, Paragraph } = Typography;
+const { Title } = Typography;
 
 type ClientFormValues = Pick<
   Client,
@@ -34,134 +46,131 @@ const Hola = () => {
   const [updating, setUpdating] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [exampleIndex, setExampleIndex] = useState(1);
 
   const handleSearchByName = (term?: string) => {
-      setEmailSearchText(''); // al buscar por nombre, limpio el email
+    setEmailSearchText(''); // al buscar por nombre, limpio el email
 
-      const jwt = process.env.NEXT_PUBLIC_JWT;
-      const name = (term ?? nameSearchText).trim();
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const name = (term ?? nameSearchText).trim();
 
-      setError(null);
-      setLoading(true);
+    setError(null);
+    setLoading(true);
 
-      const controller = new AbortController();
-      const signal = controller.signal;
+    const controller = new AbortController();
+    const signal = controller.signal;
 
-      const serviceName = name ? 'getClientsByName' : 'getClients';
-      const endPointData = name ? { query: name } : {};
+    const serviceName = name ? 'getClientsByName' : 'getClients';
+    const endPointData = name ? { query: name } : {};
 
-      Service.getCases(serviceName, {
-        signal,
-        endPointData,
-        token: jwt,
+    Service.getCases(serviceName, {
+      signal,
+      endPointData,
+      token: jwt,
+    })
+      .then((res) => {
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
       })
-        .then((res) => {
-          const lista = Array.isArray(res) ? (res as Client[]) : [];
-          setClients(lista);
-        })
-        .catch((err: any) => {
-          if (err?.name === 'AbortError') return;
-            console.error('ERROR EN getClientsByName:', err);
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return;
+        console.error('ERROR EN getClientsByName:', err);
 
-          const errorMessage =
-            err?.body?.message ||
-            err?.body?.error ||
-            err?.statusText ||
-            'Ha ocurrido un error al cargar los clientes';
+        const errorMessage =
+          err?.body?.message ||
+          err?.body?.error ||
+          err?.statusText ||
+          'Ha ocurrido un error al cargar los clientes';
 
-          setError(errorMessage);
-        })
-        .finally(() => setLoading(false));
+        setError(errorMessage);
+      })
+      .finally(() => setLoading(false));
   };
 
   const handleSearchByEmail = (term?: string) => {
-      setNameSearchText(''); // al buscar por email, limpio el nombre
+    setNameSearchText(''); // al buscar por email, limpio el nombre
 
-      const jwt = process.env.NEXT_PUBLIC_JWT;
-      const email = (term ?? emailSearchText).trim();
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const email = (term ?? emailSearchText).trim();
 
-      setError(null);
-      setLoading(true);
+    setError(null);
+    setLoading(true);
 
-      const controller = new AbortController();
-      const signal = controller.signal;
+    const controller = new AbortController();
+    const signal = controller.signal;
 
-      const serviceName = email ? 'getClientsByEmail' : 'getClients';
-      const endPointData = email ? { email } : {};
+    const serviceName = email ? 'getClientsByEmail' : 'getClients';
+    const endPointData = email ? { email } : {};
 
-      Service.getCases(serviceName, {
-        signal,
-        endPointData,
-        token: jwt,
+    Service.getCases(serviceName, {
+      signal,
+      endPointData,
+      token: jwt,
+    })
+      .then((res) => {
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
       })
-        .then((res) => {
-          const lista = Array.isArray(res) ? (res as Client[]) : [];
-          setClients(lista);
-        })
-        .catch((err: any) => {
-          if (err?.name === 'AbortError') return;
-          console.error('ERROR EN getClientsByEmail:', err);
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return;
+        console.error('ERROR EN getClientsByEmail:', err);
 
-          // si tu backend devuelve 500 cuando no hay resultado
-          if (err?.status === 500) {
-            setClients([]);
-            setError(null);
-            return;
-          }
+        if (err?.status === 500) {
+          setClients([]);
+          setError(null);
+          return;
+        }
 
-          const errorMessage =
-            err?.body?.message ||
-            err?.body?.error ||
-            err?.statusText ||
-            'Ha ocurrido un error al cargar los clientes';
+        const errorMessage =
+          err?.body?.message ||
+          err?.body?.error ||
+          err?.statusText ||
+          'Ha ocurrido un error al cargar los clientes';
 
-          setError(errorMessage);
-        })
-        .finally(() => setLoading(false));
+        setError(errorMessage);
+      })
+      .finally(() => setLoading(false));
   };
 
   const handleCreateClient = (values: ClientFormValues) => {
-      const jwt = process.env.NEXT_PUBLIC_JWT;
-      const controller = new AbortController();
-      const signal = controller.signal;
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
 
-      setError(null);
-      setCreating(true);
+    setError(null);
+    setCreating(true);
 
-      Service.getCases('createClient', {
-        signal,
-        endPointData: values, // { name, surname, email, phone, cifNifNie }
-        token: jwt,
+    Service.getCases('createClient', {
+      signal,
+      endPointData: values,
+      token: jwt,
+    })
+      .then(() => {
+        return Service.getCases('getClients', {
+          signal,
+          endPointData: {},
+          token: jwt,
+        });
       })
-        .then(() => {
-          // después de crear, recargamos toda la lista de clientes
-          return Service.getCases('getClients', {
-            signal,
-            endPointData: {},
-            token: jwt,
-          });
-        })
-        .then((res) => {
-          const lista = Array.isArray(res) ? (res as Client[]) : [];
-          setClients(lista);
-          form.resetFields();
-          setModalOpen(false);
-        })
-        .catch((err: any) => {
-          if (err?.name === 'AbortError') return;
-          console.error('ERROR EN createClient:', err);
+      .then((res) => {
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
+        form.resetFields();
+        setModalOpen(false);
+      })
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return;
+        console.error('ERROR EN createClient:', err);
 
-          const errorMessage =
-            err?.body?.message ||
-            err?.body?.error ||
-            err?.statusText ||
-            'Ha ocurrido un error al crear el cliente';
+        const errorMessage =
+          err?.body?.message ||
+          err?.body?.error ||
+          err?.statusText ||
+          'Ha ocurrido un error al crear el cliente';
 
-          setError(errorMessage);
-        })
-        .finally(() => setCreating(false));
+        setError(errorMessage);
+      })
+      .finally(() => setCreating(false));
   };
 
   const handleDeleteClient = async (id: Client['id']) => {
@@ -245,6 +254,20 @@ const Hola = () => {
     }
   };
 
+  const handleFillExample = () => {
+    const index = exampleIndex;
+
+    form.setFieldsValue({
+      name: `nomEjemplo${index}`,
+      surname: `apellido${index}`,
+      email: `ej${index}@example.com`,
+      phone: `60000000${index}`,
+      cifNifNie: `X000000${index}A`,
+    });
+
+    setExampleIndex((prev) => prev + 1);
+  };
+
   const columns: ColumnsType<Client> = [
     {
       title: (
@@ -259,7 +282,7 @@ const Hola = () => {
             allowClear
             onClear={() => {
               setNameSearchText('');
-              handleSearchByName(''); // vuelve a getClients
+              handleSearchByName('');
             }}
           />
         </div>
@@ -281,7 +304,7 @@ const Hola = () => {
             allowClear
             onClear={() => {
               setEmailSearchText('');
-              handleSearchByEmail(''); // vuelve a getClients
+              handleSearchByEmail('');
             }}
           />
         </div>
@@ -320,21 +343,16 @@ const Hola = () => {
   ];
 
   return (
-    <section 
-      className="space-y-4 min-h-screen p-6" 
-      style={{ backgroundColor: 'bg-slate-800' }}>
+    <section
+      className="space-y-4 min-h-screen p-6"
+      style={{ backgroundColor: 'bg-slate-800' }}
+    >
       {/* Cabecera + botón crear */}
       <div className="flex items-center justify-between">
         <div>
           <Title level={2} style={{ marginBottom: 4, color: '#ffffff' }}>
             Clientes
           </Title>
-          <Paragraph
-            type="secondary"
-            style={{ margin: 0, color: '#ffffff' }}
-          >
-            Listado de clientes obtenidos del microservicio.
-          </Paragraph>
         </div>
 
         <Button
@@ -344,6 +362,7 @@ const Hola = () => {
             setEditingClient(null);
             form.resetFields();
             setModalOpen(true);
+            setExampleIndex(1);
           }}
         >
           Nuevo cliente
@@ -383,11 +402,14 @@ const Hola = () => {
         footer={null}
         destroyOnClose
       >
-        <Form<ClientFormValues>
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
+        {/* NUEVO: botón dentro del modal */}
+        <div className="mb-4 flex justify-end">
+          <Button type="dashed" onClick={handleFillExample}>
+            Rellenar datos de ejemplo
+          </Button>
+        </div>
+
+        <Form<ClientFormValues> form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
             name="name"
             label="Nombre"
@@ -407,7 +429,10 @@ const Hola = () => {
           <Form.Item
             name="email"
             label="Email"
-            rules={[{ required: true, message: 'Introduce el email' }]}
+            rules={[
+              { required: true, message: 'Introduce el email' },
+              { type: 'email', message: 'El email no es válido' },
+            ]}
           >
             <Input />
           </Form.Item>
