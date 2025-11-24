@@ -29,38 +29,45 @@ export default function RootLayout({
     <html lang="es">
       <body
         className={`
-          ${geistSans.variable} 
-          ${geistMono.variable} 
-          bg-slate-800 
-          text-slate-100 
+          ${geistSans.variable}
+          ${geistMono.variable}
+          bg-slate-800
+          text-slate-100
           antialiased
         `}
       >
-        <div className="min-h-screen max-w-3xl mx-auto px-4 py-6 flex flex-col gap-6">
-          {/* Cabecera muy simple */}
-          <header className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <Link href="/" className="text-lg font-semibold">
-              Demo frontend
-            </Link>
-
-            <nav className="flex gap-4 text-sm text-slate-300">
-              <Link
-                href="/"
-                className="hover:text-blue-400 transition"
-              >
-                Inicio
+        {/* Contenedor a pantalla completa */}
+        <div className="min-h-screen flex flex-col">
+          {/* Header a ancho completo */}
+          <header className="w-full border-b border-slate-800">
+            <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+              <Link href="/" className="text-lg font-semibold">
+                Demo frontend
               </Link>
-            </nav>
+
+              <nav className="flex gap-4 text-sm text-slate-300">
+                <Link
+                  href="/"
+                  className="hover:text-blue-400 transition"
+                >
+                  Inicio
+                </Link>
+              </nav>
+            </div>
           </header>
 
-          {/* Contenido de cada página */}
-          <main className="flex-1 py-4">
-            {children}
+          {/* Contenido centrado */}
+          <main className="flex-1">
+            <div className="max-w-5xl mx-auto px-4 py-6">
+              {children}
+            </div>
           </main>
 
-          {/* Pie de página sencillo */}
-          <footer className="border-t border-slate-800 pt-3 text-xs text-slate-400">
-            Demo frontend · {new Date().getFullYear()}
+          {/* Footer (también a ancho completo con contenido centrado) */}
+          <footer className="w-full border-t border-slate-800">
+            <div className="max-w-5xl mx-auto px-4 py-3 text-xs text-slate-400">
+              Demo frontend · {new Date().getFullYear()}
+            </div>
           </footer>
         </div>
       </body>

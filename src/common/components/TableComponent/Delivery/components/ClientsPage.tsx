@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 import type { Merchant } from '@/domain/merchant';
@@ -50,45 +50,46 @@ const Hola = () => {
     string | undefined
   >(undefined);
   const [linkingMerchant, setLinkingMerchant] = useState(false);
+
+  const searchNameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // --------------------------------------------------
 
   const handleSearchByName = (term?: string) => {
-    setEmailSearchText(''); // al buscar por nombre, limpio el email
+  setEmailSearchText(''); // al buscar por nombre, limpio el email
 
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    const name = (term ?? nameSearchText).trim();
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+  const name = (term ?? nameSearchText).trim();
 
-    setError(null);
-    setLoading(true);
+  setError(null);
 
-    const controller = new AbortController();
-    const signal = controller.signal;
+  const controller = new AbortController();
+  const signal = controller.signal;
 
-    const serviceName = name ? 'getClientsByName' : 'getClients';
-    const endPointData = name ? { query: name } : {};
+  const serviceName = name ? 'getClientsByName' : 'getClients';
+  const endPointData = name ? { query: name } : {};
 
-    Service.getCases(serviceName, {
-      signal,
-      endPointData,
-      token: jwt,
+  Service.getCases(serviceName, {
+    signal,
+    endPointData,
+    token: jwt,
+  })
+    .then((res) => {
+      const lista = Array.isArray(res) ? (res as Client[]) : [];
+      setClients(lista);
     })
-      .then((res) => {
-        const lista = Array.isArray(res) ? (res as Client[]) : [];
-        setClients(lista);
-      })
-      .catch((err: any) => {
-        if (err?.name === 'AbortError') return;
-        console.error('ERROR EN getClientsByName:', err);
+    .catch((err: any) => {
+      if (err?.name === 'AbortError') return;
+      console.error('ERROR EN getClientsByName:', err);
 
-        const errorMessage =
-          err?.body?.message ||
-          err?.body?.error ||
-          err?.statusText ||
-          'Ha ocurrido un error al cargar los clientes';
+      const errorMessage =
+        err?.body?.message ||
+        err?.body?.error ||
+        err?.statusText ||
+        'Ha ocurrido un error al cargar los clientes';
 
-        setError(errorMessage);
-      })
-      .finally(() => setLoading(false));
+      setError(errorMessage);
+    });
   };
 
   const handleSearchByEmail = (term?: string) => {
@@ -335,25 +336,21 @@ const Hola = () => {
     }
   };
 
+  const handleNameInputChange = (value: string) => {
+  setNameSearchText(value);
+
+  if (searchNameTimeoutRef.current) {
+    clearTimeout(searchNameTimeoutRef.current);
+  }
+
+  searchNameTimeoutRef.current = setTimeout(() => {
+    handleSearchByName(value);
+  }, 300);
+  };
+
   const columns: ColumnsType<Client> = [
     {
-      title: (
-        <div className="flex flex-col gap-1">
-          <span>Nombre</span>
-          <Input
-            size="small"
-            placeholder="Escribe un nombre"
-            value={nameSearchText}
-            onChange={(e) => setNameSearchText(e.target.value)}
-            onPressEnter={() => handleSearchByName()}
-            allowClear
-            onClear={() => {
-              setNameSearchText('');
-              handleSearchByName('');
-            }}
-          />
-        </div>
-      ),
+      title: 'Nombre',
       dataIndex: 'name',
       key: 'name',
     },
@@ -419,27 +416,43 @@ const Hola = () => {
   ];
 
   return (
-    <section className="space-y-4 min-h-screen p-6 bg-slate-800 overflow-hidden">
-      {/* Cabecera + botón crear */}
-      <div className="flex items-center justify-between">
+  <section className="min-h-screen bg-slate-800 py-8 px-4">
+    {/* Contenedor centrado para que todo tenga el mismo ancho */}
+    <div className="max-w-5xl mx-auto space-y-4">
+      {/* Cabecera + búsqueda + botón crear */}
+      <div className="space-y-3">
         <div>
           <Title level={2} style={{ marginBottom: 4, color: '#ffffff' }}>
             Clientes
           </Title>
         </div>
 
-        <Button
-          type="primary"
-          onClick={() => {
-            setMode('create');
-            setEditingClient(null);
-            form.resetFields();
-            setModalOpen(true);
-            setExampleIndex(1);
-          }}
-        >
-          Nuevo cliente
-        </Button>
+        <div className="flex w-full items-center justify-between gap-4">
+          {/* Buscador a la izquierda */}
+          <Input
+            placeholder="Buscar por nombre..."
+            value={nameSearchText}
+            onChange={(e) => handleNameInputChange(e.target.value)}
+            allowClear
+            className="w-full max-w-xs" 
+          />
+
+          {/* Botón pequeño pegado a la derecha */}
+          <Button
+            type="primary"
+            onClick={() => {
+              setMode('create');
+              setEditingClient(null);
+              form.resetFields();
+              setModalOpen(true);
+              setExampleIndex(1);
+            }}
+            className="shrink-0"
+          >
+            Nuevo cliente
+          </Button>
+        </div>
+
       </div>
 
       {/* Error */}
@@ -452,8 +465,8 @@ const Hola = () => {
         />
       )}
 
-      {/* Tabla dentro de una tarjeta blanca */}
-      <div className="bg-white rounded-xl overflow-hidden shadow-sm w-full">
+      {/* Tabla dentro de una tarjeta blanca (mismo ancho que el buscador) */}
+      <div className="bg-white rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex justify-center py-10">
             <Spin tip="Cargando clientes..." />
@@ -503,8 +516,10 @@ const Hola = () => {
         onLinkMerchant={handleLinkMerchant}
         linkingMerchant={linkingMerchant}
       />
-    </section>
-  );
+    </div>
+  </section>
+);
+
 };
 
 export default Hola;
