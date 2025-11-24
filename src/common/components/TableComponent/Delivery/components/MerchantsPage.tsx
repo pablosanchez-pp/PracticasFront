@@ -14,6 +14,10 @@ import MerchantsTable from './MerchantsTable';
 import { useMerchants } from './useMerchants';
 import type { Merchant } from '@/domain/merchant';
 import { MERCHANT_TYPES } from '@/domain/merchant';
+import { getClientById } from '@/service/src/application/queries/getClients';
+import type { Client } from '@/domain/client';
+
+
 
 const { Title } = Typography;
 
@@ -34,6 +38,7 @@ const MerchantsPage: React.FC = () => {
     editMerchant,
     removeMerchant,
     setError,
+    getClientForMerchant,
   } = useMerchants();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -100,7 +105,6 @@ const MerchantsPage: React.FC = () => {
     }
   };    
 
-  // Rellenar datos de ejemplo en el formulario del modal
   const handleFillExample = () => {
     const index = exampleIndex;
 
@@ -113,6 +117,48 @@ const MerchantsPage: React.FC = () => {
 
     setExampleIndex((prev) => prev + 1);
   };
+
+  const handleShowClient = async (merchant: Merchant) => {
+  try {
+    const result = await getClientForMerchant(merchant.id);
+    
+
+    const clientIds: string[] = Array.isArray(result)
+      ? result
+      : result
+        ? [result]
+        : [];
+
+    if (!clientIds.length) {
+      Modal.info({
+        title: 'Cliente asociado',
+        content: <p>Este merchant no tiene clientes asociados</p>,
+      });
+      return;
+    }
+
+  
+    const clients: Client[] = await Promise.all(
+      clientIds.map((id) => getClientById(id)),
+    );
+
+    Modal.info({
+      title: clientIds.length === 1 ? 'Cliente asociado' : 'Clientes asociados',
+      content: (
+        <div>
+          {clients.map((c) => (
+            <p key={c.id}>
+              {c.name} {c.surname} ({c.email})
+            </p>
+          ))}
+        </div>
+      ),
+    });
+  } catch (err: any) {
+    setError(err?.message ?? 'Error getting client of merchant');
+  }
+  };
+
 
   return (
     <div>
@@ -152,6 +198,7 @@ const MerchantsPage: React.FC = () => {
         loading={loading}
         onEdit={openEditModal}
         onDelete={(merchant) => removeMerchant(merchant.id)}
+        onShowClient={handleShowClient}
       />
 
       <Modal

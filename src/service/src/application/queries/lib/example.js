@@ -37,6 +37,18 @@ const clientUseCases = {
       undefined,
     ),
 
+  getClientById: (signal, values, token) =>
+    manageRequest(
+      signal,
+      'getClientById',
+      values,
+      'normal', 
+      'normal',
+      'get',
+      token,
+      undefined,
+    ),  
+
   createClient: (signal, values, token) =>
     manageRequest(
       signal,
@@ -96,6 +108,18 @@ const clientUseCases = {
       'normal',
       'normal',
       'post',
+      token,
+      undefined,
+    ),
+
+  getClientOfMerchant: (signal, values, token) =>
+    manageRequest(
+      signal,
+      'getClientOfMerchant',
+      values,
+      'normal',
+      'normal',
+      'get',
       token,
       undefined,
     ),

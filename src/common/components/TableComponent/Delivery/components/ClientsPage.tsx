@@ -5,42 +5,21 @@ import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 import type { Merchant } from '@/domain/merchant';
 
-import {
-  Spin,
-  Alert,
-  Typography,
-  Input,
-  Button,
-  Form,
-  Tooltip,
-  Modal,
-  Select,   // ⬅️ IMPORTANTE
-} from 'antd';
+import {Spin,Alert,Typography,Input,Button,Form,Tooltip,Modal} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import { useClients } from './useClients';
 import ClientsTable from './ClientsTable';
-import {
-  deleteClient,
-  updateClient,
-  listMerchantsOfClient,      // ⬅️ ya lo añadimos antes en getClients.ts
-  linkClientToMerchant,       // ⬅️ idem
-} from '@/service/src/application/queries/getClients';
+import {deleteClient,updateClient,listMerchantsOfClient,linkClientToMerchant} from '@/service/src/application/queries/getClients';
 
-import { getMerchants } from '@/service/src/application/queries/getMerchants'; // ⬅️ para cargar todos los merchants
+import { getMerchants } from '@/service/src/application/queries/getMerchants';
 
-import {
-  DeleteOutlined,
-  EditOutlined,
-  ApartmentOutlined,          // ⬅️ icono para merchants
-} from '@ant-design/icons';
+import {DeleteOutlined,EditOutlined,ApartmentOutlined} from '@ant-design/icons';
+
+import ClientForm, { ClientFormValues } from './ClientForm';
+import ClientMerchantsModal from './ClientMerchantsModals';
 
 const { Title } = Typography;
-
-type ClientFormValues = Pick<
-  Client,
-  'name' | 'surname' | 'email' | 'phone' | 'cifNifNie'
->;
 
 const Hola = () => {
   const { clients, setClients, loading, setLoading, error, setError } =
@@ -58,7 +37,6 @@ const Hola = () => {
 
   const [exampleIndex, setExampleIndex] = useState(1);
 
-  // --------- ESTADO PARA MODAL DE MERCHANTS ---------
   const [merchantsModalOpen, setMerchantsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
@@ -68,7 +46,9 @@ const Hola = () => {
   const [allMerchants, setAllMerchants] = useState<Merchant[]>([]);
   const [loadingAllMerchants, setLoadingAllMerchants] = useState(false);
 
-  const [selectedMerchantId, setSelectedMerchantId] = useState<string | undefined>();
+  const [selectedMerchantId, setSelectedMerchantId] = useState<
+    string | undefined
+  >(undefined);
   const [linkingMerchant, setLinkingMerchant] = useState(false);
   // --------------------------------------------------
 
@@ -292,7 +272,6 @@ const Hola = () => {
     setExampleIndex((prev) => prev + 1);
   };
 
-  // ---------- FUNCIONES PARA MERCHANTS ----------
   const loadClientMerchants = async (clientId: string) => {
     try {
       setLoadingClientMerchants(true);
@@ -332,10 +311,7 @@ const Hola = () => {
     setClientMerchants([]);
     setSelectedMerchantId(undefined);
 
-    await Promise.all([
-      loadClientMerchants(client.id),
-      loadAllMerchants(),
-    ]);
+    await Promise.all([loadClientMerchants(client.id), loadAllMerchants()]);
   };
 
   const handleLinkMerchant = async () => {
@@ -344,7 +320,7 @@ const Hola = () => {
     try {
       setLinkingMerchant(true);
       await linkClientToMerchant(selectedClient.id, selectedMerchantId);
-      // Recargo los merchants del cliente
+      
       await loadClientMerchants(selectedClient.id);
     } catch (err: any) {
       console.error('ERROR EN linkClientToMerchant:', err);
@@ -358,7 +334,6 @@ const Hola = () => {
       setLinkingMerchant(false);
     }
   };
-  // ----------------------------------------------
 
   const columns: ColumnsType<Client> = [
     {
@@ -444,9 +419,7 @@ const Hola = () => {
   ];
 
   return (
-    <section
-      className="space-y-4 min-h-screen p-6 bg-slate-800 overflow-hidden"
-    >
+    <section className="space-y-4 min-h-screen p-6 bg-slate-800 overflow-hidden">
       {/* Cabecera + botón crear */}
       <div className="flex items-center justify-between">
         <div>
@@ -502,142 +475,34 @@ const Hola = () => {
         footer={null}
         destroyOnClose
       >
-        {/* botón dentro del modal */}
-        <div className="mb-4 flex justify-end">
-          <Button type="dashed" onClick={handleFillExample}>
-            Rellenar datos de ejemplo
-          </Button>
-        </div>
-
-        <Form<ClientFormValues>
+        <ClientForm
           form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
-          <Form.Item
-            name="name"
-            label="Nombre"
-            rules={[{ required: true, message: 'Introduce el nombre' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="surname"
-            label="Apellidos"
-            rules={[{ required: true, message: 'Introduce los apellidos' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: 'Introduce el email' },
-              { type: 'email', message: 'El email no es válido' },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="phone" label="Teléfono">
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="cifNifNie" label="CIF/NIF/NIE">
-            <Input />
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={mode === 'create' ? creating : updating}
-              block
-            >
-              {mode === 'create' ? 'Guardar' : 'Guardar cambios'}
-            </Button>
-          </Form.Item>
-        </Form>
+          mode={mode}
+          loading={mode === 'create' ? creating : updating}
+          onSubmit={handleSubmit}
+          onFillExample={handleFillExample}
+        />
       </Modal>
 
       {/* Modal para ver/asociar merchants */}
-      <Modal
+      <ClientMerchantsModal
         open={merchantsModalOpen}
-        title={
-          selectedClient
-            ? `Merchants de ${selectedClient.name}`
-            : 'Merchants del cliente'
-        }
-        onCancel={() => {
+        client={selectedClient}
+        clientMerchants={clientMerchants}
+        allMerchants={allMerchants}
+        loadingClientMerchants={loadingClientMerchants}
+        loadingAllMerchants={loadingAllMerchants}
+        selectedMerchantId={selectedMerchantId}
+        onChangeSelectedMerchant={setSelectedMerchantId}
+        onClose={() => {
           setMerchantsModalOpen(false);
           setSelectedClient(null);
           setClientMerchants([]);
           setSelectedMerchantId(undefined);
         }}
-        footer={null}
-        destroyOnClose
-      >
-        {loadingClientMerchants ? (
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <Spin tip="Cargando merchants del cliente..." />
-          </div>
-        ) : (
-          <>
-            <p>
-              <strong>Merchants asociados:</strong>
-            </p>
-            {clientMerchants.length > 0 ? (
-              <ul style={{ paddingLeft: 18, marginBottom: 16 }}>
-                {clientMerchants.map((mId) => {
-                  const merchant = allMerchants.find((m) => m.id === mId);
-                  return (
-                    <li key={mId}>{merchant ? merchant.name : mId}</li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p>No hay merchants asociados a este cliente.</p>
-            )}
-
-            <hr style={{ margin: '16px 0' }} />
-
-            <p>
-              <strong>Asociar nuevo merchant</strong>
-            </p>
-
-            {loadingAllMerchants ? (
-              <Spin tip="Cargando lista de merchants..." />
-            ) : (
-              <>
-                <Select
-                  placeholder="Selecciona un merchant"
-                  value={selectedMerchantId}
-                  onChange={(value) => setSelectedMerchantId(value)}
-                  style={{ width: '100%', marginBottom: 8 }}
-                  options={allMerchants.map((m) => ({
-                    value: m.id,
-                    label: m.name
-                  }))}
-                  showSearch
-                  optionFilterProp="label"
-                />
-
-                <Button
-                  type="primary"
-                  onClick={handleLinkMerchant}
-                  loading={linkingMerchant}
-                  disabled={!selectedMerchantId}
-                  block
-                >
-                  Asociar merchant
-                </Button>
-              </>
-            )}
-          </>
-        )}
-      </Modal>
+        onLinkMerchant={handleLinkMerchant}
+        linkingMerchant={linkingMerchant}
+      />
     </section>
   );
 };

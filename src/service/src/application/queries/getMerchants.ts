@@ -81,3 +81,17 @@ export async function deleteMerchant(id: Merchant['id']): Promise<void> {
     jwt,
   );
 }
+
+export async function getClientOfMerchant(
+  merchantId: Merchant['id'],
+): Promise<string> {
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+
+  return http<string>(
+    `${BASE_URL}/${merchantId}/client`,
+    {
+      method: 'GET',
+    },
+    jwt,
+  );
+}

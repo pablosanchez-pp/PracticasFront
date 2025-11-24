@@ -2,6 +2,9 @@ export const EXAMPLE_QUERIES = {
   getClients: () =>
     `http://localhost:8081/api/client/findAll`,
 
+  getClientsById: () =>
+    `http://localhost:8081/api/client`,
+
   getClientsByName: () =>
     `http://localhost:8081/api/client/findByName`,
 
@@ -36,7 +39,10 @@ export const EXAMPLE_QUERIES = {
     `http://localhost:8081/api/client/{clientId}/merchants/{merchantId}`,
 
   listMerchants: () =>
-    `http://localhost:8081/api/client/{clientId}/merchants`
+    `http://localhost:8081/api/client/{clientId}/merchants`,
+
+  getClientOfMerchant: () =>
+    `http://localhost:8082/api/merchant/{merchantId}/client`
 };
 
 
@@ -46,4 +52,5 @@ export const EXAMPLE_ERROR_MESSAGES = {
     getClientsByEmail: 'No hay coincidencias con ese email',
     getMerchants: 'No hay merchants',
     getMerchantsByName: 'No hay coincidencias con ese nombre',
+    getClientOfMerchant: 'Este merchant no tiene cliente asociado',
 }

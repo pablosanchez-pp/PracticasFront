@@ -27,6 +27,18 @@ export async function getClientsByName(name: string): Promise<Client[]> {
   );
 }
 
+export async function getClientById(id: Client['id']): Promise<Client> {
+  const jwt = process.env.NEXT_PUBLIC_JWT;
+
+  return http<Client>(
+    `http://localhost:8081/api/client/${id}`,
+    {
+      method: 'GET',
+    },
+    jwt,
+  );
+}
+
 export async function getClientsByEmail(email: string): Promise<Client[]> {
   const jwt = process.env.NEXT_PUBLIC_JWT;
 

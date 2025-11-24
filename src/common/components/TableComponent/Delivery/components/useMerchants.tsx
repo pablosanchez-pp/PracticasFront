@@ -10,6 +10,7 @@ import {
   deleteMerchant,         
   type NewMerchant,
   type UpdateMerchantData,
+  getClientOfMerchant
 } from '@/service/src/application/queries/getMerchants';
 
 export function useMerchants() {
@@ -57,7 +58,7 @@ export function useMerchants() {
     setMerchants((prev) => prev.map((m) => (m.id === id ? updated : m)));
   };
 
-  // 👇 NUEVO: borrar
+  
   const removeMerchant = async (id: Merchant['id']) => {
     try {
       await deleteMerchant(id);                    
@@ -66,6 +67,17 @@ export function useMerchants() {
     } catch (e: any) {
       console.error('Error deleting merchant', e);
       setError(e?.message ?? 'Error deleting merchant');
+    }
+  };
+
+  const getClientForMerchant = async (id: Merchant['id']) => {
+    try {
+      const clientId = await getClientOfMerchant(id);
+      setError(null);
+      return clientId; // string con el ID del cliente
+    } catch (e: any) {
+      setError(e?.message ?? 'Error getting client of merchant');
+      throw e;
     }
   };
 
@@ -83,5 +95,6 @@ export function useMerchants() {
     editMerchant,
     removeMerchant,  
     setError,
+    getClientForMerchant
   };
 }

@@ -1,15 +1,17 @@
 'use client';
 
 import { Table, Button, Tooltip } from 'antd';
+
 import type { ColumnsType } from 'antd/es/table';
 import type { Merchant } from '@/domain/merchant';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, UserOutlined} from '@ant-design/icons';
 
 interface MerchantsTableProps {
   merchants: Merchant[];
   loading: boolean;
   onEdit: (merchant: Merchant) => void;
   onDelete?: (merchant: Merchant) => void;
+  onShowClient?: (merchant: Merchant) => void;
 }
 
 const MerchantsTable: React.FC<MerchantsTableProps> = ({
@@ -17,6 +19,7 @@ const MerchantsTable: React.FC<MerchantsTableProps> = ({
   loading,
   onEdit,
   onDelete,
+  onShowClient,
 }) => {
   const columns: ColumnsType<Merchant> = [
     {
@@ -85,6 +88,15 @@ const MerchantsTable: React.FC<MerchantsTableProps> = ({
               ghost              
               icon={<DeleteOutlined />}
               onClick={() => onDelete && onDelete(record)}
+            />
+          </Tooltip>
+
+          <Tooltip title="Ver cliente asociado">
+            <Button
+              size="small"
+              type="default"
+              icon={<UserOutlined />}
+              onClick={() => onShowClient && onShowClient(record)}
             />
           </Tooltip>
         </div>

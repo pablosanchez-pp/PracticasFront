@@ -18,6 +18,11 @@ export const EXAMPLE_METHODS = {
 
   },
 
+  getClientById: (response) => {
+    console.log('METHOD getClientById raw response', response);
+    return response.data ?? null;
+  },
+
   getClientsByEmail: (response) => {
     console.log('METHOD getClientsByEmail raw response', response);
 
@@ -106,5 +111,22 @@ export const EXAMPLE_METHODS = {
       return true;
     }
     return false;
+  },
+
+  getClientOfMerchant: (response) => {
+    console.log('METHOD getClientOfMerchant raw response', response);
+
+    const data = response?.data;
+    if (!data) return null;
+
+    if (typeof data === 'string') {
+      return data; // clientId
+    }
+
+    if (typeof data === 'object' && data.id) {
+      return data.id;
+    }
+
+    return null;
   },
 };
