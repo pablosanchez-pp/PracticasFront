@@ -12,7 +12,7 @@ type ClientsTableProps = {
 const ClientsTable = ({ clients, columns }: ClientsTableProps) => {
   return (
     <Table<Client>
-      rowKey="email"
+      rowKey="id"
       columns={columns}
       dataSource={clients}
       locale={{ emptyText: 'No hay clientes.' }}

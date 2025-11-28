@@ -1,20 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 import type { Merchant } from '@/domain/merchant';
 
-import {Spin,Alert,Typography,Input,Button,Form,Tooltip,Modal} from 'antd';
+import { Spin, Alert, Typography, Input, Button, Form, Tooltip, Modal } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
 import { useClients } from './useClients';
 import ClientsTable from './ClientsTable';
-import {deleteClient,updateClient,listMerchantsOfClient,linkClientToMerchant} from '@/service/src/application/queries/getClients';
 
-import { getMerchants } from '@/service/src/application/queries/getMerchants';
-
-import {DeleteOutlined,EditOutlined,ApartmentOutlined} from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, ApartmentOutlined } from '@ant-design/icons';
 
 import ClientForm, { ClientFormValues } from './ClientForm';
 import ClientMerchantsModal from './ClientMerchantsModals';
@@ -22,8 +19,7 @@ import ClientMerchantsModal from './ClientMerchantsModals';
 const { Title } = Typography;
 
 const Hola = () => {
-  const { clients, setClients, loading, setLoading, error, setError } =
-    useClients();
+  const { clients, setClients, loading, setLoading, error, setError } = useClients();
 
   const [nameSearchText, setNameSearchText] = useState('');
   const [emailSearchText, setEmailSearchText] = useState('');
@@ -34,6 +30,7 @@ const Hola = () => {
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [formMounted, setFormMounted] = useState(false);
 
   const [exampleIndex, setExampleIndex] = useState(1);
 
@@ -46,9 +43,7 @@ const Hola = () => {
   const [allMerchants, setAllMerchants] = useState<Merchant[]>([]);
   const [loadingAllMerchants, setLoadingAllMerchants] = useState(false);
 
-  const [selectedMerchantId, setSelectedMerchantId] = useState<
-    string | undefined
-  >(undefined);
+  const [selectedMerchantId, setSelectedMerchantId] = useState<string | undefined>(undefined);
   const [linkingMerchant, setLinkingMerchant] = useState(false);
 
   const searchNameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,40 +51,40 @@ const Hola = () => {
   // --------------------------------------------------
 
   const handleSearchByName = (term?: string) => {
-  setEmailSearchText(''); // al buscar por nombre, limpio el email
+    setEmailSearchText(''); // al buscar por nombre, limpio el email
 
-  const jwt = process.env.NEXT_PUBLIC_JWT;
-  const name = (term ?? nameSearchText).trim();
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const name = (term ?? nameSearchText).trim();
 
-  setError(null);
+    setError(null);
 
-  const controller = new AbortController();
-  const signal = controller.signal;
+    const controller = new AbortController();
+    const signal = controller.signal;
 
-  const serviceName = name ? 'getClientsByName' : 'getClients';
-  const endPointData = name ? { query: name } : {};
+    const serviceName = name ? 'getClientByName' : 'getClient';
+    const endPointData = name ? { query: name } : {};
 
-  Service.getCases(serviceName, {
-    signal,
-    endPointData,
-    token: jwt,
-  })
-    .then((res) => {
-      const lista = Array.isArray(res) ? (res as Client[]) : [];
-      setClients(lista);
+    Service.getCases(serviceName, {
+      signal,
+      endPointData,
+      token: jwt,
     })
-    .catch((err: any) => {
-      if (err?.name === 'AbortError') return;
-      console.error('ERROR EN getClientsByName:', err);
+      .then((res) => {
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
+      })
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return;
+        console.error('ERROR EN getClientsByName:', err);
 
-      const errorMessage =
-        err?.body?.message ||
-        err?.body?.error ||
-        err?.statusText ||
-        'Ha ocurrido un error al cargar los clientes';
+        const errorMessage =
+          err?.body?.message ||
+          err?.body?.error ||
+          err?.statusText ||
+          'Ha ocurrido un error al cargar los clientes';
 
-      setError(errorMessage);
-    });
+        setError(errorMessage);
+      });
   };
 
   const handleSearchByEmail = (term?: string) => {
@@ -104,7 +99,7 @@ const Hola = () => {
     const controller = new AbortController();
     const signal = controller.signal;
 
-    const serviceName = email ? 'getClientsByEmail' : 'getClients';
+    const serviceName = email ? 'getClientByEmail' : 'getClient';
     const endPointData = email ? { email } : {};
 
     Service.getCases(serviceName, {
@@ -118,7 +113,7 @@ const Hola = () => {
       })
       .catch((err: any) => {
         if (err?.name === 'AbortError') return;
-        console.error('ERROR EN getClientsByEmail:', err);
+        console.error('ERROR EN getClientByEmail:', err);
 
         if (err?.status === 500) {
           setClients([]);
@@ -151,7 +146,7 @@ const Hola = () => {
       token: jwt,
     })
       .then(() => {
-        return Service.getCases('getClients', {
+        return Service.getCases('getClient', {
           signal,
           endPointData: {},
           token: jwt,
@@ -179,13 +174,22 @@ const Hola = () => {
   };
 
   const handleDeleteClient = async (id: Client['id']) => {
-    const confirmed = window.confirm(
-      '¿Seguro que quieres eliminar este cliente?',
-    );
+    const confirmed = window.confirm('¿Seguro que quieres eliminar este cliente?');
     if (!confirmed) return;
 
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    setError(null);
+
     try {
-      await deleteClient(id);
+      await Service.getCases('deleteClient', {
+        signal,
+        endPointData:{id},
+        token: jwt,
+      });
+
       setClients((prev) => prev.filter((c) => c.id !== id));
     } catch (err: any) {
       console.error('ERROR EN deleteClient:', err);
@@ -203,34 +207,59 @@ const Hola = () => {
   const handleEditClient = (client: Client) => {
     setEditingClient(client);
     setMode('edit');
-    form.setFieldsValue({
-      name: client.name,
-      surname: client.surname,
-      email: client.email,
-      phone: client.phone,
-      cifNifNie: client.cifNifNie,
-    });
+    // Open modal first; set fields when the form is mounted (see useEffect below)
     setModalOpen(true);
   };
 
+  // When modal opens and the form component is mounted, populate the form.
+  useEffect(() => {
+    if (modalOpen && editingClient && formMounted) {
+      form.setFieldsValue({
+        name: editingClient.name,
+        surname: editingClient.surname,
+        email: editingClient.email,
+        phone: editingClient.phone,
+        cifNifNie: editingClient.cifNifNie,
+      });
+    }
+    // For create mode: when the modal opens and the form is mounted, reset the form
+    if (modalOpen && !editingClient && formMounted) {
+      form.resetFields();
+    }
+    if (!modalOpen && formMounted) {
+      // reset form when modal closes to avoid stale data
+      form.resetFields();
+    }
+  }, [modalOpen, editingClient, form, formMounted]);
+
   const handleUpdateClient = async (values: ClientFormValues) => {
     if (!editingClient) return;
+
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
 
     setError(null);
     setUpdating(true);
 
     try {
-      const updated = await updateClient({
-        id: editingClient.id,
-        name: values.name,
-        surname: values.surname,
-        email: values.email,
-        phone: values.phone,
-        cifNifNie: values.cifNifNie,
+      const updated = await Service.getCases('updateClient', {
+        signal,
+        endPointData: {
+          id: editingClient.id,
+          name: values.name,
+          surname: values.surname,
+          email: values.email,
+          phone: values.phone,
+          cifNifNie: values.cifNifNie,
+        },
+        token: jwt,
       });
 
+      const updatedClient = updated as Client;
+
       setClients((prev) =>
-        prev.map((c) => (c.id === updated.id ? updated : c)),
+        prev.map((c) => (c.id === updatedClient.id ? updatedClient : c)),
       );
 
       setModalOpen(false);
@@ -274,12 +303,22 @@ const Hola = () => {
   };
 
   const loadClientMerchants = async (clientId: string) => {
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     try {
       setLoadingClientMerchants(true);
-      const merchantsIds = await listMerchantsOfClient(clientId);
-      setClientMerchants(merchantsIds);
+      const merchantsIds = await Service.getCases('listMerchant', {
+        signal,
+        endPointData: { clientId },
+        token: jwt,
+      });
+
+      const lista = Array.isArray(merchantsIds) ? (merchantsIds as string[]) : [];
+      setClientMerchants(lista);
     } catch (err: any) {
-      console.error('ERROR EN listMerchantsOfClient:', err);
+      console.error('ERROR EN listMerchantOfClient:', err);
       const errorMessage =
         err?.body?.message ||
         err?.body?.error ||
@@ -292,10 +331,20 @@ const Hola = () => {
   };
 
   const loadAllMerchants = async () => {
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     try {
       setLoadingAllMerchants(true);
-      const merchants = await getMerchants();
-      setAllMerchants(merchants);
+      const merchants = await Service.getCases('getMerchant', {
+        signal,
+        endPointData: {},
+        token: jwt,
+      });
+
+      const lista = Array.isArray(merchants) ? (merchants as Merchant[]) : [];
+      setAllMerchants(lista);
     } catch (err: any) {
       console.error('ERROR EN getMerchants:', err);
       const errorMessage =
@@ -318,10 +367,22 @@ const Hola = () => {
   const handleLinkMerchant = async () => {
     if (!selectedClient || !selectedMerchantId) return;
 
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     try {
       setLinkingMerchant(true);
-      await linkClientToMerchant(selectedClient.id, selectedMerchantId);
-      
+
+      await Service.getCases('link', {
+        signal,
+        endPointData: {
+          clientId: selectedClient.id,
+          merchantId: selectedMerchantId,
+        },
+        token: jwt,
+      });
+
       await loadClientMerchants(selectedClient.id);
     } catch (err: any) {
       console.error('ERROR EN linkClientToMerchant:', err);
@@ -337,15 +398,15 @@ const Hola = () => {
   };
 
   const handleNameInputChange = (value: string) => {
-  setNameSearchText(value);
+    setNameSearchText(value);
 
-  if (searchNameTimeoutRef.current) {
-    clearTimeout(searchNameTimeoutRef.current);
-  }
+    if (searchNameTimeoutRef.current) {
+      clearTimeout(searchNameTimeoutRef.current);
+    }
 
-  searchNameTimeoutRef.current = setTimeout(() => {
-    handleSearchByName(value);
-  }, 300);
+    searchNameTimeoutRef.current = setTimeout(() => {
+      handleSearchByName(value);
+    }, 300);
   };
 
   const columns: ColumnsType<Client> = [
@@ -416,110 +477,111 @@ const Hola = () => {
   ];
 
   return (
-  <section className="min-h-screen bg-slate-800 py-8 px-4">
-    {/* Contenedor centrado para que todo tenga el mismo ancho */}
-    <div className="max-w-5xl mx-auto space-y-4">
-      {/* Cabecera + búsqueda + botón crear */}
-      <div className="space-y-3">
-        <div>
-          <Title level={2} style={{ marginBottom: 4, color: '#ffffff' }}>
-            Clientes
-          </Title>
-        </div>
-
-        <div className="flex w-full items-center justify-between gap-4">
-          {/* Buscador a la izquierda */}
-          <Input
-            placeholder="Buscar por nombre..."
-            value={nameSearchText}
-            onChange={(e) => handleNameInputChange(e.target.value)}
-            allowClear
-            className="w-full max-w-xs" 
-          />
-
-          {/* Botón pequeño pegado a la derecha */}
-          <Button
-            type="primary"
-            onClick={() => {
-              setMode('create');
-              setEditingClient(null);
-              form.resetFields();
-              setModalOpen(true);
-              setExampleIndex(1);
-            }}
-            className="shrink-0"
-          >
-            Nuevo cliente
-          </Button>
-        </div>
-
-      </div>
-
-      {/* Error */}
-      {error && (
-        <Alert
-          type="error"
-          message="Error al cargar clientes"
-          description={error}
-          showIcon
-        />
-      )}
-
-      {/* Tabla dentro de una tarjeta blanca (mismo ancho que el buscador) */}
-      <div className="bg-white rounded-xl overflow-hidden shadow-sm">
-        {loading ? (
-          <div className="flex justify-center py-10">
-            <Spin tip="Cargando clientes..." />
+    <section className="min-h-screen bg-slate-800 py-8 px-4">
+      {/* Contenedor centrado para que todo tenga el mismo ancho */}
+      <div className="max-w-5xl mx-auto space-y-4">
+        {/* Cabecera + búsqueda + botón crear */}
+        <div className="space-y-3">
+          <div>
+            <Title level={2} style={{ marginBottom: 4, color: '#ffffff' }}>
+              Clientes
+            </Title>
           </div>
-        ) : (
-          <ClientsTable clients={clients} columns={columns} />
+
+          <div className="flex w-full items-center justify-between gap-4">
+            {/* Buscador a la izquierda */}
+            <Input
+              placeholder="Buscar por nombre..."
+              value={nameSearchText}
+              onChange={(e) => handleNameInputChange(e.target.value)}
+              allowClear
+              className="w-full max-w-xs"
+            />
+
+            {/* Botón pequeño pegado a la derecha */}
+            <Button
+              type="primary"
+              onClick={() => {
+                setMode('create');
+                setEditingClient(null);
+                  // Open modal first; reset the form when the form component mounts
+                  setModalOpen(true);
+                setExampleIndex(1);
+              }}
+              className="shrink-0"
+            >
+              Nuevo cliente
+            </Button>
+          </div>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <Alert
+            type="error"
+            message="Error al cargar clientes"
+            description={error}
+            showIcon
+          />
         )}
-      </div>
 
-      {/* Modal único crear/editar cliente */}
-      <Modal
-        open={modalOpen}
-        title={mode === 'create' ? 'Crear cliente' : 'Editar cliente'}
-        onCancel={() => {
-          setModalOpen(false);
-          setEditingClient(null);
-          form.resetFields();
-        }}
-        footer={null}
-        destroyOnClose
-      >
-        <ClientForm
-          form={form}
-          mode={mode}
-          loading={mode === 'create' ? creating : updating}
-          onSubmit={handleSubmit}
-          onFillExample={handleFillExample}
+        {/* Tabla dentro de una tarjeta blanca (mismo ancho que el buscador) */}
+        <div className="bg-white rounded-xl overflow-hidden shadow-sm">
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <Spin tip="Cargando clientes...">
+                <div style={{ minHeight: 40 }} />
+              </Spin>
+            </div>
+          ) : (
+            <ClientsTable clients={clients} columns={columns} />
+          )}
+        </div>
+
+        {/* Modal único crear/editar cliente */}
+        <Modal 
+          open={modalOpen}
+          title={mode === 'create' ? 'Crear cliente' : 'Editar cliente'}
+          onCancel={() => {
+            setModalOpen(false);
+            setEditingClient(null);
+            form.resetFields();
+          }}
+          footer={null}
+        >
+          <ClientForm
+            form={form}
+            mode={mode}
+            loading={mode === 'create' ? creating : updating}
+            onSubmit={handleSubmit}
+            onFillExample={handleFillExample}
+            onMount={() => setFormMounted(true)}
+            onUnmount={() => setFormMounted(false)}
+          />
+        </Modal>
+
+        {/* Modal para ver/asociar merchants */}
+        <ClientMerchantsModal
+          open={merchantsModalOpen}
+          client={selectedClient}
+          clientMerchants={clientMerchants}
+          allMerchants={allMerchants}
+          loadingClientMerchants={loadingClientMerchants}
+          loadingAllMerchants={loadingAllMerchants}
+          selectedMerchantId={selectedMerchantId}
+          onChangeSelectedMerchant={setSelectedMerchantId}
+          onClose={() => {
+            setMerchantsModalOpen(false);
+            setSelectedClient(null);
+            setClientMerchants([]);
+            setSelectedMerchantId(undefined);
+          }}
+          onLinkMerchant={handleLinkMerchant}
+          linkingMerchant={linkingMerchant}
         />
-      </Modal>
-
-      {/* Modal para ver/asociar merchants */}
-      <ClientMerchantsModal
-        open={merchantsModalOpen}
-        client={selectedClient}
-        clientMerchants={clientMerchants}
-        allMerchants={allMerchants}
-        loadingClientMerchants={loadingClientMerchants}
-        loadingAllMerchants={loadingAllMerchants}
-        selectedMerchantId={selectedMerchantId}
-        onChangeSelectedMerchant={setSelectedMerchantId}
-        onClose={() => {
-          setMerchantsModalOpen(false);
-          setSelectedClient(null);
-          setClientMerchants([]);
-          setSelectedMerchantId(undefined);
-        }}
-        onLinkMerchant={handleLinkMerchant}
-        linkingMerchant={linkingMerchant}
-      />
-    </div>
-  </section>
-);
-
+      </div>
+    </section>
+  );
 };
 
 export default Hola;

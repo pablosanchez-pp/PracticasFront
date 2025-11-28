@@ -1,10 +1,10 @@
 import manageRequest from '@/domain/manageRequest';
 
 const clientUseCases = {
-  getClients: (signal, values, token) =>
+  getClient: (signal, values, token) =>
     manageRequest(
       signal,
-      'getClients',
+      'getClient',
       values,
       'query',
       'normal',
@@ -13,10 +13,10 @@ const clientUseCases = {
       undefined,
     ),
 
-  getClientsByName: (signal, values, token) =>
+  getClientByName: (signal, values, token) =>
     manageRequest(
       signal,
-      'getClientsByName',
+      'getClientByName',
       values,
       'query',
       'normal',
@@ -25,10 +25,10 @@ const clientUseCases = {
       undefined,
     ),
 
-  getClientsByEmail: (signal, values, token) =>
+  getClientByEmail: (signal, values, token) =>
     manageRequest(
       signal,
-      'getClientsByEmail',
+      'getClientByEmail',
       values,
       'query',
       'normal',
@@ -42,7 +42,7 @@ const clientUseCases = {
       signal,
       'getClientById',
       values,
-      'normal', 
+      'url',
       'normal',
       'get',
       token,
@@ -67,9 +67,9 @@ const clientUseCases = {
       signal,
       'deleteClient',       
       values,                     
-      'normal',             
+      'url',             
       'normal',               
-      'post',                     
+      'delete',                     
       token,
       undefined,                  
     ), 
@@ -79,7 +79,7 @@ const clientUseCases = {
       signal,
       'updateClient',        
       values,                  
-      'normal',
+      'url',
       'normal',
       'put',        
       token,
@@ -87,10 +87,10 @@ const clientUseCases = {
       { 'Content-Type': 'application/json' },
     ),
 
-  listMerchants: (signal, values, token) =>
+  listMerchant: (signal, values, token) =>
     manageRequest(
       signal,
-      'listMerchants',   
+      'listMerchant',   
       values,        
       'normal',
       'normal',
@@ -105,21 +105,9 @@ const clientUseCases = {
       signal,
       'link',       
       values,         
-      'normal',
+      'url',
       'normal',
       'post',
-      token,
-      undefined,
-    ),
-
-  getClientOfMerchant: (signal, values, token) =>
-    manageRequest(
-      signal,
-      'getClientOfMerchant',
-      values,
-      'normal',
-      'normal',
-      'get',
       token,
       undefined,
     ),

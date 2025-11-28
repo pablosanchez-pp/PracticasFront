@@ -1,18 +1,28 @@
 'use client';
 
 import { Form, Input, Select, Button } from 'antd';
-import { MERCHANT_TYPES } from '@/domain/merchant';
-import { createMerchant, type NewMerchant } from '@/service/src/application/queries/getMerchants';
+import { MERCHANT_TYPES, type Merchant } from '@/domain/merchant';
+import Service from '@/service/src';
 
 interface Props {
   onCreated?: () => void; // para recargar la lista después de crear
 }
 
 const MerchantCreateForm: React.FC<Props> = ({ onCreated }) => {
-  const [form] = Form.useForm<NewMerchant>();
+  const [form] = Form.useForm<Merchant>();
 
-  const onFinish = async (values: NewMerchant) => {
-    await createMerchant(values);
+  const onFinish = async (values: Merchant) => {
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    // llamada usando la capa Service + useCases
+    await Service.getCases('createMerchant', {
+      signal,
+      endPointData: values,
+      token: jwt,
+    });
+
     form.resetFields();
     if (onCreated) onCreated();
   };

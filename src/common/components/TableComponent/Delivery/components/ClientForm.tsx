@@ -1,6 +1,7 @@
 'use client';
 
 import { Form, Input, Button } from 'antd';
+import { useEffect } from 'react';
 import type { Client } from '@/domain/client';
 import type { FormInstance } from 'antd/es/form';
 
@@ -15,6 +16,8 @@ interface ClientFormProps {
   loading: boolean;
   onSubmit: (values: ClientFormValues) => void;
   onFillExample: () => void;
+  onMount?: () => void;
+  onUnmount?: () => void;
 }
 
 const ClientForm: React.FC<ClientFormProps> = ({
@@ -23,7 +26,15 @@ const ClientForm: React.FC<ClientFormProps> = ({
   loading,
   onSubmit,
   onFillExample,
+  onMount,
+  onUnmount,
 }) => {
+  useEffect(() => {
+    onMount?.();
+    return () => {
+      onUnmount?.();
+    };
+  }, [onMount, onUnmount]);
   return (
     <>
       {/* Botón para rellenar datos de ejemplo */}

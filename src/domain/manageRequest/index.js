@@ -45,24 +45,54 @@ const manageRequest = async (
 
     let url = QUERIES[requestString](params);
 
+    let bodyParams = params && typeof params === 'object' ? { ...params } : params;
+
+    if (typeof url === 'string' && params && typeof params === 'object') {
+      url = url.replace(/\{([^}]+)\}/g, (match, key) => {
+        if (Object.prototype.hasOwnProperty.call(params, key)) {
+          const v = params[key];
+          if (bodyParams && typeof bodyParams === 'object') delete bodyParams[key];
+          return encodeURIComponent(v);
+        }
+        return match;
+      });
+    }
+
     if (mode === 'query') {
       if (typeof params === 'string') {
         url += `?${params}`;
+        bodyParams = {};
       } else {
         const dataForSend = Object.keys(params)
-          .map(
-            (k) => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]),
-          )
+          .map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
           .join('&');
         url += `?${dataForSend}`;
+        bodyParams = {};
       }
     } else if (mode === 'url') {
-      url += Object.values(params).map((v) => '/' + encodeURIComponent(v));
-    } else if (
-      METHODS_WITH_BODY.includes(method.toLowerCase()) ||
-      mode === 'body'
-    ) {
-      fetchConfig['body'] = commonBody ? JSON.stringify(params) : params;
+      if (typeof params === 'string') {
+        url += '/' + encodeURIComponent(params);
+        bodyParams = {};
+      } else if (Array.isArray(params)) {
+        url += params.map((v) => '/' + encodeURIComponent(v)).join('');
+        bodyParams = {};
+      } else if (params && typeof params === 'object') {
+        const keys = bodyParams && typeof bodyParams === 'object' ? Object.keys(bodyParams) : Object.keys(params);
+        const idKeys = keys.filter((k) => /id$/i.test(k));
+        if (METHODS_WITH_BODY.includes(method.toLowerCase()) && idKeys.length > 0) {
+          url += idKeys.map((k) => '/' + encodeURIComponent(bodyParams[k] ?? params[k])).join('');
+          idKeys.forEach((k) => delete bodyParams[k]);
+        } else if (keys.length > 0) {
+          url += keys.map((k) => '/' + encodeURIComponent(bodyParams[k] ?? params[k])).join('');
+          bodyParams = {};
+        } else {
+       
+        }
+      }
+    }
+
+    if (METHODS_WITH_BODY.includes(method.toLowerCase()) || mode === 'body') {
+      fetchConfig['body'] = commonBody ? JSON.stringify(bodyParams) : bodyParams;
     }
 
     const response = await fetch(url, fetchConfig);
@@ -97,6 +127,11 @@ const manageRequest = async (
       requestString,
     );
   } catch (error) {
+  
+    if (error && error.name === 'AbortError') {
+      throw error;
+    }
+
     console.error('[FETCH_CONFIG_ERROR]', error);
     throw error;
   }

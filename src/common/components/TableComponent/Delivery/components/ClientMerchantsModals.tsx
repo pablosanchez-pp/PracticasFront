@@ -37,11 +37,12 @@ const ClientMerchantsModal: React.FC<ClientMerchantsModalProps> = ({
       title={client ? `Merchants de ${client.name}` : 'Merchants del cliente'}
       onCancel={onClose}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       {loadingClientMerchants ? (
         <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <Spin tip="Cargando merchants del cliente..." />
+          {/* Removed `tip` to avoid AntD warning about nesting/fullscreen pattern */}
+          <Spin size="large" />
         </div>
       ) : (
         <>
@@ -66,7 +67,7 @@ const ClientMerchantsModal: React.FC<ClientMerchantsModalProps> = ({
           </p>
 
           {loadingAllMerchants ? (
-            <Spin tip="Cargando lista de merchants..." />
+            <Spin />
           ) : (
             <>
               <Select

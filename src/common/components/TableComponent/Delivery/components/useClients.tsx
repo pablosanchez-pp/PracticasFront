@@ -16,7 +16,7 @@ export function useClients() {
     setLoading(true);
     setError(null);
 
-    Service.getCases('getClients', {
+    Service.getCases('getClient', {
       signal,
       endPointData: {},
       token: process.env.NEXT_PUBLIC_JWT,
