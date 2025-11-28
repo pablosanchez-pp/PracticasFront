@@ -10,8 +10,8 @@ import {
   Form,
   Select,
 } from 'antd';
-import MerchantsTable from './MerchantsTable';
-import { useMerchants } from './useMerchants';
+import MerchantsTable from '../components/TableComponent/Delivery/components/MerchantsTable';
+import { useMerchants } from '../components/TableComponent/Delivery/components/useMerchants';
 import type { Merchant } from '@/domain/merchant';
 import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { Client } from '@/domain/client';

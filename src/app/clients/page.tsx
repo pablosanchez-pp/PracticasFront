@@ -1,4 +1,4 @@
-import Hola from "@/common/components/TableComponent/Delivery/components/ClientsPage";
+import Hola from "@/common/pages/ClientsPage";
 
 
 export default function ClientsPage() {

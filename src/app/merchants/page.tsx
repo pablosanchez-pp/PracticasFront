@@ -1,4 +1,4 @@
-import MerchantsPage from '@/common/components/TableComponent/Delivery/components/MerchantsPage';
+import MerchantsPage from '@/common/pages/MerchantsPage';
 
 export default function Page() {
   return <MerchantsPage />;

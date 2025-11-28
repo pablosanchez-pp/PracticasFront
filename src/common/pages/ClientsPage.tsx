@@ -8,13 +8,13 @@ import type { Merchant } from '@/domain/merchant';
 import { Spin, Alert, Typography, Input, Button, Form, Tooltip, Modal } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
-import { useClients } from './useClients';
-import ClientsTable from './ClientsTable';
+import { useClients } from '../components/TableComponent/Delivery/components/useClients';
+import ClientsTable from '../components/TableComponent/Delivery/components/ClientsTable';
 
 import { DeleteOutlined, EditOutlined, ApartmentOutlined } from '@ant-design/icons';
 
-import ClientForm, { ClientFormValues } from './ClientForm';
-import ClientMerchantsModal from './ClientMerchantsModals';
+import ClientForm, { ClientFormValues } from '../components/TableComponent/Delivery/components/ClientForm';
+import ClientMerchantsModal from '../components/TableComponent/Delivery/components/ClientMerchantsModals';
 
 const { Title } = Typography;
 
