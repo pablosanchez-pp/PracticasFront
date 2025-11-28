@@ -180,9 +180,15 @@ const MerchantsPage: React.FC = () => {
         return;
       }
 
-      const clients: Client[] = await Promise.all(
+      const settled = await Promise.allSettled(
         clientIds.map((id) => fetchClientById(id)),
       );
+
+      const clients: Client[] = settled
+        .filter((r) => r.status === 'fulfilled')
+        .map((r: PromiseFulfilledResult<Client>) => r.value);
+
+      const failedCount = settled.filter((r) => r.status === 'rejected').length;
 
       Modal.info({
         title: clientIds.length === 1 ? 'Cliente asociado' : 'Clientes asociados',
@@ -193,6 +199,11 @@ const MerchantsPage: React.FC = () => {
                 {c.name} {c.surname} ({c.email})
               </p>
             ))}
+            {failedCount > 0 && (
+              <p style={{ color: 'orange' }}>
+                {failedCount} cliente{failedCount > 1 ? 's' : ''} no se pudieron cargar.
+              </p>
+            )}
           </div>
         ),
       });

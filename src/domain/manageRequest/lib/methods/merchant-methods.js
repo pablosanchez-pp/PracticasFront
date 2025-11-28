@@ -38,17 +38,23 @@ export const MERCHANT_METHODS = {
 
   getClientOfMerchant: (response) => {
     console.log('METHOD getClientOfMerchant raw response', response);
-
     const data = response?.data;
     if (!data) return null;
 
-    if (typeof data === 'string') {
-      return data; // clientId
+    // If backend returns a single client id as string
+    if (typeof data === 'string') return data;
+
+    // If backend returns an array
+    if (Array.isArray(data)) {
+      if (data.length === 0) return [];
+      // array of primitive ids
+      if (typeof data[0] === 'string') return data;
+      // array of client objects -> return objects as-is so callers can use them directly
+      return data;
     }
 
-    if (typeof data === 'object' && data.id) {
-      return data.id;
-    }
+    // If backend returns a single client object, return it as-is
+    if (typeof data === 'object') return data;
 
     return null;
   },
