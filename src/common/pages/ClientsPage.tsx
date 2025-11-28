@@ -8,27 +8,61 @@ import type { Merchant } from '@/domain/merchant';
 import { Spin, Alert, Typography, Input, Button, Form, Tooltip, Modal } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 
-import { useClients } from '../components/TableComponent/Delivery/components/useClients';
 import ClientsTable from '../components/TableComponent/Delivery/components/ClientsTable';
 
 import { DeleteOutlined, EditOutlined, ApartmentOutlined } from '@ant-design/icons';
 
 import ClientForm, { ClientFormValues } from '../components/TableComponent/Delivery/components/ClientForm';
 import ClientMerchantsModal from '../components/TableComponent/Delivery/components/ClientMerchantsModals';
+import { revalidatePath } from 'next/cache';
 
 const { Title } = Typography;
 
 const Hola = () => {
-  const { clients, setClients, loading, setLoading, error, setError } = useClients();
+  // Inline useClients state and logic to remove dependency on the external hook
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load clients on mount (same behavior as the previous useClients hook)
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    setLoading(true);
+
+    Service.getCases('getClient', {
+      signal,
+      endPointData: {},
+      token: process.env.NEXT_PUBLIC_JWT,
+    })
+      .then((res) => {
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
+      })
+      .catch((err: any) => {
+        if (err?.name === 'AbortError') return;
+        console.error('ERROR EN getClients:', err);
+
+        const errorMessage =
+          err?.body?.message ||
+          err?.body?.error ||
+          err?.statusText ||
+          'Ha ocurrido un error al cargar los clientes';
+
+        setError(errorMessage);
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, []);
 
   const [nameSearchText, setNameSearchText] = useState('');
   const [emailSearchText, setEmailSearchText] = useState('');
-
   const [form] = Form.useForm<ClientFormValues>();
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
-  const [creating, setCreating] = useState(false);
-  const [updating, setUpdating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [formMounted, setFormMounted] = useState(false);
 
@@ -138,39 +172,42 @@ const Hola = () => {
     const signal = controller.signal;
 
     setError(null);
-    setCreating(true);
-
-    Service.getCases('createClient', {
-      signal,
-      endPointData: values,
-      token: jwt,
-    })
-      .then(() => {
-        return Service.getCases('getClient', {
+    setSubmitting(true);
+    (async () => {
+      try {
+        await Service.getCases('createClient', {
           signal,
-          endPointData: {},
+          endPointData: values,
           token: jwt,
         });
-      })
-      .then((res) => {
-        const lista = Array.isArray(res) ? (res as Client[]) : [];
-        setClients(lista);
+
+        // reload clients list after successful create
+        try {
+          const reloadController = new AbortController();
+          const reloadSignal = reloadController.signal;
+          const res = await Service.getCases('getClient', {
+            signal: reloadSignal,
+            endPointData: {},
+            token: jwt,
+          });
+          const lista = Array.isArray(res) ? (res as Client[]) : [];
+          setClients(lista);
+        } catch (e) {
+          // ignore reload errors
+        }
+
         form.resetFields();
         setModalOpen(false);
-      })
-      .catch((err: any) => {
+      } catch (err: any) {
         if (err?.name === 'AbortError') return;
         console.error('ERROR EN createClient:', err);
-
         const errorMessage =
-          err?.body?.message ||
-          err?.body?.error ||
-          err?.statusText ||
-          'Ha ocurrido un error al crear el cliente';
-
+          err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al crear el cliente';
         setError(errorMessage);
-      })
-      .finally(() => setCreating(false));
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   const handleDeleteClient = async (id: Client['id']) => {
@@ -239,8 +276,8 @@ const Hola = () => {
     const controller = new AbortController();
     const signal = controller.signal;
 
-    setError(null);
-    setUpdating(true);
+  setError(null);
+  setSubmitting(true);
 
     try {
       const updated = await Service.getCases('updateClient', {
@@ -276,7 +313,7 @@ const Hola = () => {
 
       setError(errorMessage);
     } finally {
-      setUpdating(false);
+      setSubmitting(false);
     }
   };
 
@@ -552,7 +589,7 @@ const Hola = () => {
           <ClientForm
             form={form}
             mode={mode}
-            loading={mode === 'create' ? creating : updating}
+            loading={submitting}
             onSubmit={handleSubmit}
             onFillExample={handleFillExample}
             onMount={() => setFormMounted(true)}
