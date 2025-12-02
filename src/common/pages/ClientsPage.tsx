@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 import type { Merchant } from '@/domain/merchant';
@@ -14,57 +15,48 @@ import { DeleteOutlined, EditOutlined, ApartmentOutlined } from '@ant-design/ico
 
 import ClientForm, { ClientFormValues } from '../components/TableComponent/Delivery/components/ClientForm';
 import ClientMerchantsModal from '../components/TableComponent/Delivery/components/ClientMerchantsModals';
-import { revalidatePath } from 'next/cache';
 
 const { Title } = Typography;
 
-const Hola = () => {
-  // Inline useClients state and logic to remove dependency on the external hook
+type ClientsPageActions = {
+  // Only read actions are allowed from the server wrapper. Mutations run client-side.
+  list?: () => Promise<any>;
+  getById?: (id: string) => Promise<any>;
+  getByName?: (query: string) => Promise<any>;
+  getByEmail?: (email: string) => Promise<any>;
+  revalidate?: () => Promise<void>;
+};
+
+const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }> = ({ initialClients, actions }) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load clients on mount (same behavior as the previous useClients hook)
+  const router = useRouter();
+
   useEffect(() => {
-    const controller = new AbortController();
-    const signal = controller.signal;
+    if (initialClients && Array.isArray(initialClients)) {
+      setClients(initialClients);
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
-    setLoading(true);
+    setClients([]);
+    setLoading(false);
+    setError('No hay acción del servidor para obtener clientes');
+  }, [initialClients]);
 
-    Service.getCases('getClient', {
-      signal,
-      endPointData: {},
-      token: process.env.NEXT_PUBLIC_JWT,
-    })
-      .then((res) => {
-        const lista = Array.isArray(res) ? (res as Client[]) : [];
-        setClients(lista);
-      })
-      .catch((err: any) => {
-        if (err?.name === 'AbortError') return;
-        console.error('ERROR EN getClients:', err);
-
-        const errorMessage =
-          err?.body?.message ||
-          err?.body?.error ||
-          err?.statusText ||
-          'Ha ocurrido un error al cargar los clientes';
-
-        setError(errorMessage);
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, []);
-
-  const [nameSearchText, setNameSearchText] = useState('');
-  const [emailSearchText, setEmailSearchText] = useState('');
+  const [search, setSearch] = useState({ name: '', email: '' });
   const [form] = Form.useForm<ClientFormValues>();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const [modal, setModal] = useState<{
+    open: boolean;
+    mode: 'create' | 'edit';
+    editingClient: Client | null;
+    formMounted: boolean;
+  }>({ open: false, mode: 'create', editingClient: null, formMounted: false });
+  
   const [submitting, setSubmitting] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [formMounted, setFormMounted] = useState(false);
 
   const [exampleIndex, setExampleIndex] = useState(1);
 
@@ -72,147 +64,136 @@ const Hola = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const [clientMerchants, setClientMerchants] = useState<string[]>([]);
-  const [loadingClientMerchants, setLoadingClientMerchants] = useState(false);
 
   const [allMerchants, setAllMerchants] = useState<Merchant[]>([]);
-  const [loadingAllMerchants, setLoadingAllMerchants] = useState(false);
+  const [merchantsLoading, setMerchantsLoading] = useState({ client: false, all: false });
 
   const [selectedMerchantId, setSelectedMerchantId] = useState<string | undefined>(undefined);
   const [linkingMerchant, setLinkingMerchant] = useState(false);
 
-  const searchNameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // --------------------------------------------------
-
-  const handleSearchByName = (term?: string) => {
-    setEmailSearchText(''); // al buscar por nombre, limpio el email
-
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    const name = (term ?? nameSearchText).trim();
-
-    setError(null);
-
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    const serviceName = name ? 'getClientByName' : 'getClient';
-    const endPointData = name ? { query: name } : {};
-
-    Service.getCases(serviceName, {
-      signal,
-      endPointData,
-      token: jwt,
-    })
-      .then((res) => {
-        const lista = Array.isArray(res) ? (res as Client[]) : [];
-        setClients(lista);
-      })
-      .catch((err: any) => {
-        if (err?.name === 'AbortError') return;
-        console.error('ERROR EN getClientsByName:', err);
-
-        const errorMessage =
-          err?.body?.message ||
-          err?.body?.error ||
-          err?.statusText ||
-          'Ha ocurrido un error al cargar los clientes';
-
-        setError(errorMessage);
-      });
-  };
-
-  const handleSearchByEmail = (term?: string) => {
-    setNameSearchText(''); // al buscar por email, limpio el nombre
-
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    const email = (term ?? emailSearchText).trim();
-
-    setError(null);
+  const handleSearchByName = async (term?: string) => {
+    setSearch((s) => ({ ...s, email: '' }));
+    const name = (term ?? search.name).trim();
     setLoading(true);
-
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    const serviceName = email ? 'getClientByEmail' : 'getClient';
-    const endPointData = email ? { email } : {};
-
-    Service.getCases(serviceName, {
-      signal,
-      endPointData,
-      token: jwt,
-    })
-      .then((res) => {
-        const lista = Array.isArray(res) ? (res as Client[]) : [];
-        setClients(lista);
-      })
-      .catch((err: any) => {
-        if (err?.name === 'AbortError') return;
-        console.error('ERROR EN getClientByEmail:', err);
-
-        if (err?.status === 500) {
+    setError(null);
+    try {
+      if (!name) {
+        if (!actions?.list) {
+          setError('Acción del servidor list no disponible');
           setClients([]);
-          setError(null);
           return;
         }
+        const res = await actions.list();
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
+        return;
+      }
 
-        const errorMessage =
-          err?.body?.message ||
-          err?.body?.error ||
-          err?.statusText ||
-          'Ha ocurrido un error al cargar los clientes';
+      if (!actions?.getByName) {
+        setError('Acción del servidor getByName no disponible');
+        setClients([]);
+        return;
+      }
 
-        setError(errorMessage);
-      })
-      .finally(() => setLoading(false));
+      const res = await actions.getByName(name);
+      const lista = Array.isArray(res) ? (res as Client[]) : [];
+      setClients(lista);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      console.error('ERROR EN getClientsByName:', err);
+      
+      const status = err?.status || err?.body?.status;
+      if (status === 404 || status === 500) {
+        setClients([]);
+        setError(null);
+        return;
+      }
+      const errorMessage =
+        err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al cargar los clientes';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCreateClient = (values: ClientFormValues) => {
+  const handleSearchByEmail = async (term?: string) => {
+    setSearch((s) => ({ ...s, name: '' }));
+    const email = (term ?? search.email).trim();
+    setLoading(true);
+    setError(null);
+    try {
+      if (!email) {
+        if (!actions?.list) {
+          setError('Acción del servidor list no disponible');
+          setClients([]);
+          return;
+        }
+        const res = await actions.list();
+        const lista = Array.isArray(res) ? (res as Client[]) : [];
+        setClients(lista);
+        return;
+      }
+
+      if (!actions?.getByEmail) {
+        setError('Acción del servidor getByEmail no disponible');
+        setClients([]);
+        return;
+      }
+
+      const res = await actions.getByEmail(email);
+      const lista = Array.isArray(res) ? (res as Client[]) : [];
+      setClients(lista);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      console.error('ERROR EN getClientByEmail:', err);
+      setClients([]);
+      setError(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateClient = async (values: ClientFormValues) => {
+    setError(null);
+    setSubmitting(true);
+
     const jwt = process.env.NEXT_PUBLIC_JWT;
     const controller = new AbortController();
     const signal = controller.signal;
 
-    setError(null);
-    setSubmitting(true);
-    (async () => {
+    try {
+      await Service.getCases('createClient', {
+        signal,
+        endPointData: values,
+        token: jwt,
+      });
+
       try {
-        await Service.getCases('createClient', {
-          signal,
-          endPointData: values,
-          token: jwt,
-        });
-
-        // reload clients list after successful create
-        try {
-          const reloadController = new AbortController();
-          const reloadSignal = reloadController.signal;
-          const res = await Service.getCases('getClient', {
-            signal: reloadSignal,
-            endPointData: {},
-            token: jwt,
-          });
-          const lista = Array.isArray(res) ? (res as Client[]) : [];
-          setClients(lista);
-        } catch (e) {
-          // ignore reload errors
+        if (actions?.revalidate) {
+          await actions.revalidate();
+        } else {
+          // Per requirement: do NOT perform client-side revalidation. Signal missing server action.
+          setError('Acción del servidor de revalidación no disponible');
         }
-
-        form.resetFields();
-        setModalOpen(false);
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
-        console.error('ERROR EN createClient:', err);
-        const errorMessage =
-          err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al crear el cliente';
-        setError(errorMessage);
-      } finally {
-        setSubmitting(false);
+      } catch (e) {
+        // ignore server revalidate errors but surface a message
+        console.error('ERROR EN revalidate:', e);
       }
-    })();
+
+      form.resetFields();
+      setModal((m) => ({ ...m, open: false, editingClient: null }));
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      console.error('ERROR EN createClient:', err);
+      const errorMessage =
+        err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al crear el cliente';
+      setError(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDeleteClient = async (id: Client['id']) => {
-    const confirmed = window.confirm('¿Seguro que quieres eliminar este cliente?');
-    if (!confirmed) return;
 
     const jwt = process.env.NEXT_PUBLIC_JWT;
     const controller = new AbortController();
@@ -223,7 +204,7 @@ const Hola = () => {
     try {
       await Service.getCases('deleteClient', {
         signal,
-        endPointData:{id},
+        endPointData: { id },
         token: jwt,
       });
 
@@ -242,35 +223,29 @@ const Hola = () => {
   };
 
   const handleEditClient = (client: Client) => {
-    setEditingClient(client);
-    setMode('edit');
-    // Open modal first; set fields when the form is mounted (see useEffect below)
-    setModalOpen(true);
+    setModal((m) => ({ ...m, open: true, mode: 'edit', editingClient: client, formMounted: false }));
   };
 
-  // When modal opens and the form component is mounted, populate the form.
   useEffect(() => {
-    if (modalOpen && editingClient && formMounted) {
+    if (modal.open && modal.editingClient && modal.formMounted) {
       form.setFieldsValue({
-        name: editingClient.name,
-        surname: editingClient.surname,
-        email: editingClient.email,
-        phone: editingClient.phone,
-        cifNifNie: editingClient.cifNifNie,
+        name: modal.editingClient.name,
+        surname: modal.editingClient.surname,
+        email: modal.editingClient.email,
+        phone: modal.editingClient.phone,
+        cifNifNie: modal.editingClient.cifNifNie,
       });
     }
-    // For create mode: when the modal opens and the form is mounted, reset the form
-    if (modalOpen && !editingClient && formMounted) {
+    if (modal.open && !modal.editingClient && modal.formMounted) {
       form.resetFields();
     }
-    if (!modalOpen && formMounted) {
-      // reset form when modal closes to avoid stale data
+    if (!modal.open && modal.formMounted) {
       form.resetFields();
     }
-  }, [modalOpen, editingClient, form, formMounted]);
+  }, [modal.open, modal.editingClient, form, modal.formMounted]);
 
   const handleUpdateClient = async (values: ClientFormValues) => {
-    if (!editingClient) return;
+    if (!modal.editingClient) return;
 
     const jwt = process.env.NEXT_PUBLIC_JWT;
     const controller = new AbortController();
@@ -283,7 +258,7 @@ const Hola = () => {
       const updated = await Service.getCases('updateClient', {
         signal,
         endPointData: {
-          id: editingClient.id,
+          id: modal.editingClient.id,
           name: values.name,
           surname: values.surname,
           email: values.email,
@@ -295,12 +270,9 @@ const Hola = () => {
 
       const updatedClient = updated as Client;
 
-      setClients((prev) =>
-        prev.map((c) => (c.id === updatedClient.id ? updatedClient : c)),
-      );
+      setClients((prev) => prev.map((c) => (c.id === updatedClient.id ? updatedClient : c)));
 
-      setModalOpen(false);
-      setEditingClient(null);
+      setModal((m) => ({ ...m, open: false, editingClient: null }));
       form.resetFields();
     } catch (err: any) {
       console.error('ERROR EN updateClient:', err);
@@ -318,7 +290,7 @@ const Hola = () => {
   };
 
   const handleSubmit = (values: ClientFormValues) => {
-    if (mode === 'create') {
+    if (modal.mode === 'create') {
       handleCreateClient(values);
     } else {
       handleUpdateClient(values);
@@ -345,7 +317,7 @@ const Hola = () => {
     const signal = controller.signal;
 
     try {
-      setLoadingClientMerchants(true);
+      setMerchantsLoading((s) => ({ ...s, client: true }));
       const merchantsIds = await Service.getCases('listMerchant', {
         signal,
         endPointData: { clientId },
@@ -363,7 +335,7 @@ const Hola = () => {
         'Ha ocurrido un error al cargar los merchants del cliente';
       setError(errorMessage);
     } finally {
-      setLoadingClientMerchants(false);
+      setMerchantsLoading((s) => ({ ...s, client: false }));
     }
   };
 
@@ -373,7 +345,7 @@ const Hola = () => {
     const signal = controller.signal;
 
     try {
-      setLoadingAllMerchants(true);
+      setMerchantsLoading((s) => ({ ...s, all: true }));
       const merchants = await Service.getCases('getMerchant', {
         signal,
         endPointData: {},
@@ -388,7 +360,7 @@ const Hola = () => {
         err?.message || 'Ha ocurrido un error al cargar todos los merchants';
       setError(errorMessage);
     } finally {
-      setLoadingAllMerchants(false);
+      setMerchantsLoading((s) => ({ ...s, all: false }));
     }
   };
 
@@ -435,15 +407,7 @@ const Hola = () => {
   };
 
   const handleNameInputChange = (value: string) => {
-    setNameSearchText(value);
-
-    if (searchNameTimeoutRef.current) {
-      clearTimeout(searchNameTimeoutRef.current);
-    }
-
-    searchNameTimeoutRef.current = setTimeout(() => {
-      handleSearchByName(value);
-    }, 300);
+    setSearch({ name: value, email: '' });
   };
 
   const columns: ColumnsType<Client> = [
@@ -460,12 +424,12 @@ const Hola = () => {
           <Input
             size="small"
             placeholder="Escribe un email"
-            value={emailSearchText}
-            onChange={(e) => setEmailSearchText(e.target.value)}
+            value={search.email}
+            onChange={(e) => setSearch({ name: '', email: e.target.value })}
             onPressEnter={() => handleSearchByEmail()}
             allowClear
             onClear={() => {
-              setEmailSearchText('');
+              setSearch({ name: '', email: '' });
               handleSearchByEmail('');
             }}
           />
@@ -529,9 +493,14 @@ const Hola = () => {
             {/* Buscador a la izquierda */}
             <Input
               placeholder="Buscar por nombre..."
-              value={nameSearchText}
+              value={search.name}
               onChange={(e) => handleNameInputChange(e.target.value)}
+              onPressEnter={() => handleSearchByName()}
               allowClear
+              onClear={() => {
+                setSearch({ name: '', email: '' });
+                handleSearchByName('');
+              }}
               className="w-full max-w-xs"
             />
 
@@ -539,10 +508,7 @@ const Hola = () => {
             <Button
               type="primary"
               onClick={() => {
-                setMode('create');
-                setEditingClient(null);
-                  // Open modal first; reset the form when the form component mounts
-                  setModalOpen(true);
+                setModal((m) => ({ ...m, open: true, mode: 'create', editingClient: null, formMounted: false }));
                 setExampleIndex(1);
               }}
               className="shrink-0"
@@ -551,7 +517,6 @@ const Hola = () => {
             </Button>
           </div>
         </div>
-
         {/* Error */}
         {error && (
           <Alert
@@ -576,24 +541,23 @@ const Hola = () => {
         </div>
 
         {/* Modal único crear/editar cliente */}
-        <Modal 
-          open={modalOpen}
-          title={mode === 'create' ? 'Crear cliente' : 'Editar cliente'}
+        <Modal
+          open={modal.open}
+          title={modal.mode === 'create' ? 'Crear cliente' : 'Editar cliente'}
           onCancel={() => {
-            setModalOpen(false);
-            setEditingClient(null);
+            setModal((m) => ({ ...m, open: false, editingClient: null, formMounted: false }));
             form.resetFields();
           }}
           footer={null}
         >
           <ClientForm
             form={form}
-            mode={mode}
+            mode={modal.mode}
             loading={submitting}
             onSubmit={handleSubmit}
             onFillExample={handleFillExample}
-            onMount={() => setFormMounted(true)}
-            onUnmount={() => setFormMounted(false)}
+            onMount={() => setModal((m) => ({ ...m, formMounted: true }))}
+            onUnmount={() => setModal((m) => ({ ...m, formMounted: false }))}
           />
         </Modal>
 
@@ -603,8 +567,8 @@ const Hola = () => {
           client={selectedClient}
           clientMerchants={clientMerchants}
           allMerchants={allMerchants}
-          loadingClientMerchants={loadingClientMerchants}
-          loadingAllMerchants={loadingAllMerchants}
+          loadingClientMerchants={merchantsLoading.client}
+          loadingAllMerchants={merchantsLoading.all}
           selectedMerchantId={selectedMerchantId}
           onChangeSelectedMerchant={setSelectedMerchantId}
           onClose={() => {
