@@ -1,6 +1,7 @@
 import ClientsPage from './ClientsPage';
 import type { Client } from '@/domain/client';
-import {listClients,getClientById,getClientsByName,getClientsByEmail,revalidateClients,} from '@/common/server/clientsActions';
+import { listClients,getClientById,getClientsByName,getClientsByEmail,revalidateClients, listMerchant } from '@/common/server/clientsActions';
+import { listMerchants } from '@/common/server/merchantActions';
 
 type Props = { searchParams?: { id?: string; name?: string; email?: string } };
 
@@ -25,6 +26,8 @@ export default async function ClientsPageServer({ searchParams }: Props) {
       getByName: getClientsByName,
       getByEmail: getClientsByEmail,
       revalidate: revalidateClients,
+      listMerchants,
+      listMerchant,
     };
 
     return <ClientsPage initialClients={clients} actions={actions} />;

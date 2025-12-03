@@ -24,6 +24,9 @@ type ClientsPageActions = {
   getById?: (id: string) => Promise<any>;
   getByName?: (query: string) => Promise<any>;
   getByEmail?: (email: string) => Promise<any>;
+  // Merchant-related server reads
+  listMerchants?: () => Promise<any>;
+  listMerchant?: (clientId: string) => Promise<any>;
   revalidate?: () => Promise<void>;
 };
 
@@ -318,16 +321,19 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
 
     try {
       setMerchantsLoading((s) => ({ ...s, client: true }));
-      const merchantsIds = await Service.getCases('listMerchant', {
-        signal,
-        endPointData: { clientId },
-        token: jwt,
-      });
 
-      const lista = Array.isArray(merchantsIds) ? (merchantsIds as string[]) : [];
-      setClientMerchants(lista);
+      if (!actions?.listMerchant) {
+        setError('Acción del servidor listMerchant no disponible');
+        setClientMerchants([]);
+        return;
+      }
+
+  const merchantsIds = await actions.listMerchant(clientId);
+  const lista = Array.isArray(merchantsIds) ? (merchantsIds as string[]) : [];
+  setClientMerchants(lista);
+  return lista;
     } catch (err: any) {
-      console.error('ERROR EN listMerchantOfClient:', err);
+      console.error('ERROR EN listMerchant:', err);
       const errorMessage =
         err?.body?.message ||
         err?.body?.error ||
@@ -346,14 +352,17 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
 
     try {
       setMerchantsLoading((s) => ({ ...s, all: true }));
-      const merchants = await Service.getCases('getMerchant', {
-        signal,
-        endPointData: {},
-        token: jwt,
-      });
 
-      const lista = Array.isArray(merchants) ? (merchants as Merchant[]) : [];
+      if (!actions?.listMerchants) {
+        setError('Acción del servidor listMerchants no disponible');
+        setAllMerchants([]);
+        return;
+      }
+
+      const merchantsResult = await actions.listMerchants();
+      const lista = Array.isArray(merchantsResult) ? (merchantsResult as Merchant[]) : [];
       setAllMerchants(lista);
+      return lista;
     } catch (err: any) {
       console.error('ERROR EN getMerchants:', err);
       const errorMessage =
@@ -370,7 +379,20 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
     setClientMerchants([]);
     setSelectedMerchantId(undefined);
 
-    await Promise.all([loadClientMerchants(client.id), loadAllMerchants()]);
+    
+    try {
+      const [clientIds, merchantsList] = await Promise.all([loadClientMerchants(client.id), loadAllMerchants()]);
+
+      const merchantsArr: Merchant[] = Array.isArray(merchantsList) ? merchantsList : allMerchants;
+      const idsArr: string[] = Array.isArray(clientIds) ? clientIds : [];
+
+      const filtered = idsArr.filter((id) => merchantsArr.some((m) => m.id === id));
+      setClientMerchants(filtered);
+      
+      setAllMerchants(merchantsArr);
+    } catch (err) {
+      console.error('Error loading merchants for modal:', err);
+    }
   };
 
   const handleLinkMerchant = async () => {

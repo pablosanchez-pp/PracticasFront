@@ -1,20 +1,11 @@
-'use client';
+ 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  Typography,
-  Input,
-  Alert,
-  Button,
-  Modal,
-  Form,
-  Select,
-} from 'antd';
-import MerchantsTable from '../components/TableComponent/Delivery/components/MerchantsTable';
-import { useMerchants } from '../components/TableComponent/Delivery/components/useMerchants';
+import { useEffect, useState } from 'react';
+import { Spin, Alert, Typography, Input, Button, Modal, Form, Select } from 'antd';
 import type { Merchant } from '@/domain/merchant';
 import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { Client } from '@/domain/client';
+import MerchantsTable from '../components/TableComponent/Delivery/components/MerchantsTable';
 import Service from '@/service/src';
 
 const { Title } = Typography;
@@ -25,13 +16,25 @@ type MerchantFormValues = {
   merchantType: string;
 };
 
-const fetchClientById = async (id: string): Promise<Client> => {
-  const jwt = process.env.NEXT_PUBLIC_JWT;
-  const controller = new AbortController();
-  const signal = controller.signal;
+type MerchantsPageActions = {
+  list?: () => Promise<any>;
+  getById?: (id: string) => Promise<any>;
+  getByName?: (query: string) => Promise<any>;
+  getClientsOfMerchant?: (merchantId: string) => Promise<string[] | string | null>;
+  getClientById?: (id: string) => Promise<any>;
+  revalidate?: () => Promise<void>;
+};
 
+
+const fetchClientById = async (id: string, actions?: { getClientById?: (id: string) => Promise<any> }): Promise<Client> => {
+  if (actions?.getClientById) {
+    const c = await actions.getClientById(id);
+    return (c as Client) ?? (null as any);
+  }
+
+  const jwt = process.env.NEXT_PUBLIC_JWT;
   const client = await Service.getCases('getClientById', {
-    signal,
+    signal: undefined,
     endPointData: { id },
     token: jwt,
   });
@@ -39,119 +42,195 @@ const fetchClientById = async (id: string): Promise<Client> => {
   return client as Client;
 };
 
-const MerchantsPage: React.FC = () => {
-  const {
-    merchants,
-    loading,
-    error,
-    searchByName,
-    loadAll,
-    addMerchant,
-    editMerchant,
-    removeMerchant,
-    setError,
-    getClientForMerchant,
-  } = useMerchants();
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingMerchant, setEditingMerchant] = useState<Merchant | null>(null);
-  const [form] = Form.useForm<MerchantFormValues>();
-  const [formMounted, setFormMounted] = useState(false);
-
-  // Small wrapper to notify when the Form mounts/unmounts so we don't call
-  // form methods before the Form is connected to the instance.
-  const FormWrapper: React.FC<{
-    onMount?: () => void;
-    onUnmount?: () => void;
-    children: React.ReactNode;
-  }> = ({ onMount, onUnmount, children }) => {
-    useEffect(() => {
-      onMount?.();
-      return () => onUnmount?.();
-    }, [onMount, onUnmount]);
-
-    return <>{children}</>;
-  };
-
-  // Populate/reset form values only when the Form component is mounted
+const FormWrapper: React.FC<{
+  onMount?: () => void;
+  onUnmount?: () => void;
+  children: React.ReactNode;
+}> = ({ onMount, onUnmount, children }) => {
   useEffect(() => {
-    if (isModalOpen && editingMerchant && formMounted) {
+    onMount?.();
+    return () => onUnmount?.();
+  }, [onMount, onUnmount]);
+
+  return <>{children}</>;
+};
+
+const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: MerchantsPageActions }> = ({
+  initialMerchants,
+  actions,
+}) => {
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialMerchants && Array.isArray(initialMerchants)) {
+      setMerchants(initialMerchants);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    setMerchants([]);
+    setLoading(false);
+    setError('No hay acción del servidor para obtener merchants');
+  }, [initialMerchants]);
+
+  const [modal, setModal] = useState<{
+    open: boolean;
+    mode: 'create' | 'edit';
+    editingMerchant: Merchant | null;
+    formMounted: boolean;
+  }>({ open: false, mode: 'create', editingMerchant: null, formMounted: false });
+  const [form] = Form.useForm<MerchantFormValues>();
+  const [exampleIndex, setExampleIndex] = useState(1);
+  const [search, setSearch] = useState({ name: '' });
+  const [submitting, setSubmitting] = useState(false);
+
+
+  useEffect(() => {
+    if (modal.open && modal.editingMerchant && modal.formMounted) {
       form.setFieldsValue({
-        name: editingMerchant.name,
-        address: editingMerchant.address,
-        merchantType: editingMerchant.merchantType,
+        name: modal.editingMerchant.name,
+        address: modal.editingMerchant.address,
+        merchantType: modal.editingMerchant.merchantType,
       });
     }
 
-    if (isModalOpen && !editingMerchant && formMounted) {
+    if (modal.open && !modal.editingMerchant && modal.formMounted) {
       form.resetFields();
     }
 
-    if (!isModalOpen && formMounted) {
+    if (!modal.open && modal.formMounted) {
       form.resetFields();
     }
-  }, [isModalOpen, editingMerchant, formMounted, form]);
+  }, [modal.open, modal.editingMerchant, modal.formMounted, form]);
 
-  // contador para los datos de ejemplo
-  const [exampleIndex, setExampleIndex] = useState(1);
+  const handleSearchByName = async (term?: string) => {
+    setLoading(true);
+    setError(null);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    searchByName(value);
+    const name = (term ?? search.name).trim();
+    try {
+      if (!name) {
+        if (!actions?.list) {
+          setError('Acción del servidor list no disponible');
+          setMerchants([]);
+          return;
+        }
+        const res = await actions.list();
+        const lista = Array.isArray(res) ? (res as Merchant[]) : [];
+        setMerchants(lista);
+        return;
+      }
+
+      if (!actions?.getByName) {
+        setError('Acción del servidor getByName no disponible');
+        setMerchants([]);
+        return;
+      }
+
+      const res = await actions.getByName(name);
+      const lista = Array.isArray(res) ? (res as Merchant[]) : [];
+      setMerchants(lista);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      console.error('ERROR EN getMerchantsByName:', err);
+
+      const status = err?.status || err?.body?.status;
+      if (status === 404 || status === 500) {
+        setMerchants([]);
+        setError(null);
+        return;
+      }
+
+      const errorMessage = err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al cargar los merchants';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openCreateModal = () => {
-    setEditingMerchant(null);
-    // open modal first; reset the form when the form component mounts
-    setIsModalOpen(true);
+    setModal({ open: true, mode: 'create', editingMerchant: null, formMounted: false });
     setExampleIndex(1);
   };
 
   const openEditModal = (merchant: Merchant) => {
-    setEditingMerchant(merchant);
-    // open modal first; populate fields when the form mounts
-    setIsModalOpen(true);
+    setModal({ open: true, mode: 'edit', editingMerchant: merchant, formMounted: false });
   };
 
   const handleModalCancel = () => {
-    setIsModalOpen(false);
-    setEditingMerchant(null);
+    setModal({ open: false, mode: 'create', editingMerchant: null, formMounted: false });
   };
 
   const handleModalOk = async () => {
+    setSubmitting(true);
+    setError(null);
     try {
       const values = await form.validateFields();
 
-      if (editingMerchant) {
-        // EDITAR
-        await editMerchant(editingMerchant.id, {
-          name: values.name,
-          address: values.address,
-          merchantType: values.merchantType,
+      if (modal.mode === 'edit' && modal.editingMerchant) {
+        const jwt = process.env.NEXT_PUBLIC_JWT;
+        await Service.getCases('updateMerchant', {
+          signal: undefined,
+          endPointData: { id: modal.editingMerchant.id, ...values },
+          token: jwt,
         });
+
+        setMerchants((prev) => prev.map((m) => (m.id === modal.editingMerchant!.id ? ({ ...m, ...values } as Merchant) : m)));
       } else {
-        // CREAR
-        await addMerchant({
-          name: values.name,
-          address: values.address,
-          merchantType: values.merchantType,
+        const jwt = process.env.NEXT_PUBLIC_JWT;
+        await Service.getCases('createMerchant', {
+          signal: undefined,
+          endPointData: values,
+          token: jwt,
         });
+
+        try {
+          if (actions?.revalidate) {
+            await actions.revalidate();
+          } else {
+            setError('Acción del servidor de revalidación no disponible');
+          }
+        } catch (e) {
+          console.error('ERROR EN revalidate (merchant):', e);
+        }
       }
 
-      setIsModalOpen(false);
+      setModal((m) => ({ ...m, open: false, editingMerchant: null }));
       form.resetFields();
-      await loadAll();
     } catch (err: any) {
-      // error de validación del form
       if (err?.errorFields) return;
       setError(err?.message ?? 'Error saving merchant');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteMerchant = async (id: Merchant['id']) => {
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    setError(null);
+
+    try {
+      await Service.getCases('deleteMerchant', {
+        signal: undefined,
+        endPointData: { id },
+        token: jwt,
+      });
+
+      setMerchants((prev) => prev.filter((m) => m.id !== id));
+    } catch (err: any) {
+      console.error('ERROR EN deleteMerchant:', err);
+      const errorMessage = err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al eliminar el merchant';
+      setError(errorMessage);
     }
   };
 
   const handleFillExample = () => {
     const index = exampleIndex;
 
-    if (formMounted) {
+    if (modal.formMounted) {
       form.setFieldsValue({
         name: `merchantEjemplo${index}`,
         address: `Direccion ejemplo ${index}`,
@@ -164,31 +243,51 @@ const MerchantsPage: React.FC = () => {
 
   const handleShowClient = async (merchant: Merchant) => {
     try {
-      const result = await getClientForMerchant(merchant.id);
+      type MerchantsPageActions = {
+        list?: () => Promise<any>;
+        getById?: (id: string) => Promise<any>;
+        getByName?: (query: string) => Promise<any>;
+        getClientsOfMerchant?: (merchantId: string) => Promise<string[] | string>;
+        getClientById?: (id: string) => Promise<any>;
+        revalidate?: () => Promise<void>;
+      };
 
-      const clientIds: string[] = Array.isArray(result)
-        ? result
-        : result
-          ? [result]
-          : [];
-
-      if (!clientIds.length) {
-        Modal.info({
-          title: 'Cliente asociado',
-          content: <p>Este merchant no tiene clientes asociados</p>,
-        });
+      if (!actions?.getClientsOfMerchant) {
+        setError('Acción del servidor getClientsOfMerchant no disponible');
         return;
       }
 
-      const settled = await Promise.allSettled(
-        clientIds.map((id) => fetchClientById(id)),
-      );
+      const result = await actions.getClientsOfMerchant(merchant.id);
+      let clientIds: string[] = [];
+
+      if (Array.isArray(result)) {
+        clientIds = result as string[];
+      } else if (result == null) {
+        clientIds = [];
+      } else if (typeof result === 'string') {
+        const str = result as string;
+        const looksLikeId = /^[0-9a-zA-Z-]{6,}$/.test(str);
+        if (looksLikeId) {
+          clientIds = [str];
+        } else {
+          Modal.info({ title: 'Clientes asociados', content: <p>{str}</p> });
+          return;
+        }
+      } else {
+        Modal.info({ title: 'Clientes asociados', content: <p>Este merchant no tiene clientes asociados</p> });
+        return;
+      }
+
+      if (!clientIds.length) {
+        Modal.info({ title: 'Cliente asociado', content: <p>Este merchant no tiene clientes asociados</p> });
+        return;
+      }
+
+      const settled = await Promise.allSettled(clientIds.map((id) => fetchClientById(id, actions)));
 
       const clients: Client[] = settled
         .filter((r) => r.status === 'fulfilled')
         .map((r: PromiseFulfilledResult<Client>) => r.value);
-
-      const failedCount = settled.filter((r) => r.status === 'rejected').length;
 
       Modal.info({
         title: clientIds.length === 1 ? 'Cliente asociado' : 'Clientes asociados',
@@ -199,11 +298,6 @@ const MerchantsPage: React.FC = () => {
                 {c.name} {c.surname} ({c.email})
               </p>
             ))}
-            {failedCount > 0 && (
-              <p style={{ color: 'orange' }}>
-                {failedCount} cliente{failedCount > 1 ? 's' : ''} no se pudieron cargar.
-              </p>
-            )}
           </div>
         ),
       });
@@ -214,88 +308,53 @@ const MerchantsPage: React.FC = () => {
 
   return (
     <div>
-      {/* título en blanco */}
       <Title level={2} style={{ color: 'white' }}>
         Merchants
       </Title>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 12,
-          marginBottom: 16,
-          alignItems: 'center',
-        }}
-      >
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
         <Input
           placeholder="Search merchants by name..."
           style={{ maxWidth: 300 }}
-          onChange={handleSearchChange}
+          value={search.name}
+          onChange={(e) => setSearch({ name: e.target.value })}
+          onPressEnter={() => handleSearchByName(search.name)}
+          allowClear
+          onClear={() => {
+            setSearch({ name: '' });
+            handleSearchByName('');
+          }}
         />
         <Button type="primary" onClick={openCreateModal}>
           Nuevo merchant
         </Button>
       </div>
 
-      {error && (
-        <Alert
-          type="error"
-          message={error}
-          style={{ marginBottom: 16 }}
-        />
-      )}
+      {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
 
-      <MerchantsTable
-        merchants={merchants}
-        loading={loading}
-        onEdit={openEditModal}
-        onDelete={(merchant) => removeMerchant(merchant.id)}
-        onShowClient={handleShowClient}
-      />
+      <MerchantsTable merchants={merchants} loading={loading} onEdit={openEditModal} onDelete={(m) => handleDeleteMerchant(m.id)} onShowClient={handleShowClient} />
 
-      <Modal
-        open={isModalOpen}
-        title={editingMerchant ? 'Edit merchant' : 'Create merchant'}
-        onCancel={handleModalCancel}
-        onOk={handleModalOk}
-      >
-        {/* Botón para rellenar datos de ejemplo */}
+  <Modal open={modal.open} title={modal.editingMerchant ? 'Edit merchant' : 'Create merchant'} onCancel={handleModalCancel} onOk={handleModalOk}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
           <Button type="dashed" onClick={handleFillExample}>
             Rellenar datos de ejemplo
           </Button>
         </div>
 
-        {/* FormWrapper notifies when the Form mounts so we don't call form methods too early */}
-        <FormWrapper onMount={() => setFormMounted(true)} onUnmount={() => setFormMounted(false)}>
+  <FormWrapper onMount={() => setModal((m) => ({ ...m, formMounted: true }))} onUnmount={() => setModal((m) => ({ ...m, formMounted: false }))}>
           <Form form={form} layout="vertical">
-          <Form.Item
-            label="Name"
-            name="name"
-            rules={[{ required: true, message: 'Please enter name' }]}
-          >
-            <Input />
-          </Form.Item>
+            <Form.Item label="Name" name="name" rules={[{ required: true, message: 'Please enter name' }]}>
+              <Input />
+            </Form.Item>
 
-          <Form.Item
-            label="Address"
-            name="address"
-            rules={[{ required: true, message: 'Please enter address' }]}
-          >
-            <Input />
-          </Form.Item>
+            <Form.Item label="Address" name="address" rules={[{ required: true, message: 'Please enter address' }]}>
+              <Input />
+            </Form.Item>
 
-          <Form.Item
-            label="Type"
-            name="merchantType"
-            rules={[{ required: true, message: 'Please select type' }]}
-          >
-            <Select
-              options={MERCHANT_TYPES}
-              placeholder="Select a merchant type"
-            />
-          </Form.Item>
-        </Form>
+            <Form.Item label="Type" name="merchantType" rules={[{ required: true, message: 'Please select type' }]}>
+              <Select options={MERCHANT_TYPES} placeholder="Select a merchant type" />
+            </Form.Item>
+          </Form>
         </FormWrapper>
       </Modal>
     </div>
