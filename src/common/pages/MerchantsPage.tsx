@@ -26,20 +26,22 @@ type MerchantsPageActions = {
 };
 
 
-const fetchClientById = async (id: string, actions?: { getClientById?: (id: string) => Promise<any> }): Promise<Client> => {
-  if (actions?.getClientById) {
-    const c = await actions.getClientById(id);
-    return (c as Client) ?? (null as any);
+const fetchClientById = async (
+  id: string,
+  actions?: { getClientById?: (id: string) => Promise<any> }
+): Promise<Client | null> => {
+  if (!actions?.getClientById) {
+    console.error('fetchClientById: server action getClientById not provided');
+    return null;
   }
 
-  const jwt = process.env.NEXT_PUBLIC_JWT;
-  const client = await Service.getCases('getClientById', {
-    signal: undefined,
-    endPointData: { id },
-    token: jwt,
-  });
-
-  return client as Client;
+  try {
+    const c = await actions.getClientById(id);
+    return (c as Client) ?? null;
+  } catch (err) {
+    console.error('fetchClientById error:', err);
+    return null;
+  }
 };
 
 const FormWrapper: React.FC<{
@@ -287,7 +289,8 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
 
       const clients: Client[] = settled
         .filter((r) => r.status === 'fulfilled')
-        .map((r: PromiseFulfilledResult<Client>) => r.value);
+        .map((r) => (r as PromiseFulfilledResult<Client | null>).value)
+        .filter((c): c is Client => c !== null && c !== undefined);
 
       Modal.info({
         title: clientIds.length === 1 ? 'Cliente asociado' : 'Clientes asociados',

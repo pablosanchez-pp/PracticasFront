@@ -1,24 +1,24 @@
 export const CLIENT_QUERIES = {
   getClient: () =>
-    `http://localhost:8081/api/client/findAll`,//ok
+    `http://localhost:8081/api/client/findAll`,
 
   getClientById: () =>
     `http://localhost:8081/api/client/{id}`,
 
   getClientByName: () =>
-    `http://localhost:8081/api/client/findByName`,//ok
+    `http://localhost:8081/api/client/findByName`,
 
   getClientByEmail: () =>
-    `http://localhost:8081/api/client/search/by-email`,//ok
+    `http://localhost:8081/api/client/search/by-email`,
 
   createClient: () =>
-    `http://localhost:8081/api/client`,//ok
+    `http://localhost:8081/api/client`,
  
   deleteClient: () =>
-    `http://localhost:8081/api/client`,//ok
+    `http://localhost:8081/api/client`,
 
   updateClient: () =>
-    `http://localhost:8081/api/client`, //ok
+    `http://localhost:8081/api/client`, 
 
   link: () =>
     `http://localhost:8081/api/client/{clientId}/merchants/{merchantId}`,

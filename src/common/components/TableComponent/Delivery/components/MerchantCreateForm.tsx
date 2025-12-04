@@ -5,7 +5,7 @@ import { MERCHANT_TYPES, type Merchant } from '@/domain/merchant';
 import Service from '@/service/src';
 
 interface Props {
-  onCreated?: () => void; // para recargar la lista después de crear
+  onCreated?: () => void; 
 }
 
 const MerchantCreateForm: React.FC<Props> = ({ onCreated }) => {
@@ -16,7 +16,6 @@ const MerchantCreateForm: React.FC<Props> = ({ onCreated }) => {
     const controller = new AbortController();
     const signal = controller.signal;
 
-    // llamada usando la capa Service + useCases
     await Service.getCases('createMerchant', {
       signal,
       endPointData: values,

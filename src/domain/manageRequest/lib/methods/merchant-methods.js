@@ -41,19 +41,14 @@ export const MERCHANT_METHODS = {
     const data = response?.data;
     if (!data) return null;
 
-    // If backend returns a single client id as string
     if (typeof data === 'string') return data;
 
-    // If backend returns an array
     if (Array.isArray(data)) {
       if (data.length === 0) return [];
-      // array of primitive ids
       if (typeof data[0] === 'string') return data;
-      // array of client objects -> return objects as-is so callers can use them directly
       return data;
     }
 
-    // If backend returns a single client object, return it as-is
     if (typeof data === 'object') return data;
 
     return null;
