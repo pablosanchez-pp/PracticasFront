@@ -1,7 +1,6 @@
 import ClientsPage from './ClientsPage';
 import type { Client } from '@/domain/client';
-import { listClients,getClientById,getClientsByName,getClientsByEmail,revalidateClients, listMerchant } from '@/common/server/clientsActions';
-import { listMerchants } from '@/common/server/merchantActions';
+import { listClients, getClientById, getClientsByName, getClientsByEmail } from '@/common/server/clientsActions';
 
 type Props = { searchParams?: { id?: string; name?: string; email?: string } };
 
@@ -20,17 +19,7 @@ export default async function ClientsPageServer({ searchParams }: Props) {
       clients = await listClients();
     }
 
-    const actions = {
-      list: listClients,
-      getById: getClientById,
-      getByName: getClientsByName,
-      getByEmail: getClientsByEmail,
-      revalidate: revalidateClients,
-      listMerchants,
-      listMerchant,
-    };
-
-    return <ClientsPage initialClients={clients} actions={actions} />;
+    return <ClientsPage initialClients={clients} />;
   } catch (err) {
     console.error('ClientsPageServer error:', err);
     return <ClientsPage />;

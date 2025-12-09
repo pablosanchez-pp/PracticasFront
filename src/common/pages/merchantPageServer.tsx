@@ -1,7 +1,6 @@
 import MerchantsPage from './MerchantsPage';
 import type { Merchant } from '@/domain/merchant';
-import { listMerchants, getMerchantById, getMerchantsByName, revalidateMerchants, getClientsOfMerchant } from '@/common/server/merchantActions';
-import {getClientById } from '@/common/server/clientsActions';
+import { listMerchants, getMerchantById, getMerchantsByName } from '@/common/server/merchantActions';
 
 type Props = { searchParams?: { id?: string; name?: string; query?: string } };
 
@@ -20,16 +19,7 @@ export default async function MerchantsPageServer({ searchParams }: Props) {
       merchants = await listMerchants();
     }
 
-    const actions = {
-      list: listMerchants,
-      getById: getMerchantById,
-      getByName: getMerchantsByName,
-      revalidate: revalidateMerchants,
-      getClientsOfMerchant: getClientsOfMerchant,
-      getClientById: getClientById,
-    };
-
-    return <MerchantsPage initialMerchants={merchants} actions={actions} />;
+    return <MerchantsPage initialMerchants={merchants} />;
   } catch (err) {
     console.error('MerchantsPageServer error:', err);
     return <MerchantsPage />;

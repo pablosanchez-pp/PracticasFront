@@ -1,12 +1,16 @@
  'use client';
 
 import { useEffect, useState } from 'react';
-import { Spin, Alert, Typography, Input, Button, Modal, Form, Select } from 'antd';
+import { useRouter } from 'next/navigation';
+import {Alert, Typography, Input, Button, Modal, Form} from 'antd';
 import type { Merchant } from '@/domain/merchant';
 import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { Client } from '@/domain/client';
-import MerchantsTable from '../components/TableComponent/Delivery/components/MerchantsTable';
+import MerchantsTable from '../components/MerchantTable/Delivery';
+import MerchantForm from '../components/MerchantForm/Delivery';
 import Service from '@/service/src';
+import { getErrorMessage, isAbortError, getErrorStatus } from '@/common/utils/errorHelpers';
+import MerchantClientsModal from '@/common/components/MerchantClientsModal/Delivery';
 
 const { Title } = Typography;
 
@@ -17,53 +21,30 @@ type MerchantFormValues = {
 };
 
 type MerchantsPageActions = {
-  list?: () => Promise<any>;
-  getById?: (id: string) => Promise<any>;
-  getByName?: (query: string) => Promise<any>;
+  list?: () => Promise<Merchant[]>;
+  getById?: (id: string) => Promise<Merchant | null>;
+  getByName?: (query: string) => Promise<Merchant[]>;
   getClientsOfMerchant?: (merchantId: string) => Promise<string[] | string | null>;
-  getClientById?: (id: string) => Promise<any>;
-  revalidate?: () => Promise<void>;
+  getClientById?: (id: string) => Promise<Client | null>;
 };
 
-
-const fetchClientById = async (
-  id: string,
-  actions?: { getClientById?: (id: string) => Promise<any> }
-): Promise<Client | null> => {
-  if (!actions?.getClientById) {
-    console.error('fetchClientById: server action getClientById not provided');
-    return null;
-  }
-
-  try {
-    const c = await actions.getClientById(id);
-    return (c as Client) ?? null;
-  } catch (err) {
-    console.error('fetchClientById error:', err);
-    return null;
-  }
-};
-
-const FormWrapper: React.FC<{
-  onMount?: () => void;
-  onUnmount?: () => void;
-  children: React.ReactNode;
-}> = ({ onMount, onUnmount, children }) => {
-  useEffect(() => {
-    onMount?.();
-    return () => onUnmount?.();
-  }, [onMount, onUnmount]);
-
-  return <>{children}</>;
-};
-
-const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: MerchantsPageActions }> = ({
-  initialMerchants,
-  actions,
-}) => {
+const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: MerchantsPageActions }> = ({initialMerchants,actions,}) => {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [modal, setModal] = useState<{
+    open: boolean;
+    mode: 'create' | 'edit';
+    editingMerchant: Merchant | null;
+  }>({ open: false, mode: 'create', editingMerchant: null });
+  const [form] = Form.useForm<MerchantFormValues>();
+  const [exampleIndex, setExampleIndex] = useState(1);
+  const [search, setSearch] = useState({ name: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [clientsModalOpen, setClientsModalOpen] = useState(false);
+  const [selectedMerchantForClients, setSelectedMerchantForClients] = useState<Merchant | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (initialMerchants && Array.isArray(initialMerchants)) {
@@ -72,139 +53,94 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
       setError(null);
       return;
     }
-
     setMerchants([]);
     setLoading(false);
     setError('No hay acción del servidor para obtener merchants');
   }, [initialMerchants]);
 
-  const [modal, setModal] = useState<{
-    open: boolean;
-    mode: 'create' | 'edit';
-    editingMerchant: Merchant | null;
-    formMounted: boolean;
-  }>({ open: false, mode: 'create', editingMerchant: null, formMounted: false });
-  const [form] = Form.useForm<MerchantFormValues>();
-  const [exampleIndex, setExampleIndex] = useState(1);
-  const [search, setSearch] = useState({ name: '' });
-  const [submitting, setSubmitting] = useState(false);
-
-
   useEffect(() => {
-    if (modal.open && modal.editingMerchant && modal.formMounted) {
+    if (modal.open && modal.editingMerchant) {
       form.setFieldsValue({
         name: modal.editingMerchant.name,
         address: modal.editingMerchant.address,
         merchantType: modal.editingMerchant.merchantType,
       });
+      return;
     }
 
-    if (modal.open && !modal.editingMerchant && modal.formMounted) {
+    if (modal.open && !modal.editingMerchant) {
       form.resetFields();
+      return;
     }
 
-    if (!modal.open && modal.formMounted) {
+    if (!modal.open) {
       form.resetFields();
     }
-  }, [modal.open, modal.editingMerchant, modal.formMounted, form]);
+  }, [modal.open, modal.editingMerchant, form]);
 
   const handleSearchByName = async (term?: string) => {
-    setLoading(true);
-    setError(null);
-
+    setSearch((s) => ({ ...s }));
     const name = (term ?? search.name).trim();
-    try {
-      if (!name) {
-        if (!actions?.list) {
-          setError('Acción del servidor list no disponible');
-          setMerchants([]);
-          return;
-        }
-        const res = await actions.list();
-        const lista = Array.isArray(res) ? (res as Merchant[]) : [];
-        setMerchants(lista);
-        return;
-      }
-
-      if (!actions?.getByName) {
-        setError('Acción del servidor getByName no disponible');
-        setMerchants([]);
-        return;
-      }
-
-      const res = await actions.getByName(name);
-      const lista = Array.isArray(res) ? (res as Merchant[]) : [];
-      setMerchants(lista);
-    } catch (err: any) {
-      if (err?.name === 'AbortError') return;
-      console.error('ERROR EN getMerchantsByName:', err);
-
-      const status = err?.status || err?.body?.status;
-      if (status === 404 || status === 500) {
-        setMerchants([]);
-        setError(null);
-        return;
-      }
-
-      const errorMessage = err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al cargar los merchants';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+    const base = '/merchants';
+    if (!name) {
+      router.replace(base);
+      return;
     }
+    router.replace(`${base}?name=${encodeURIComponent(name)}`);
   };
 
   const openCreateModal = () => {
-    setModal({ open: true, mode: 'create', editingMerchant: null, formMounted: false });
+    setModal({ open: true, mode: 'create', editingMerchant: null });
     setExampleIndex(1);
   };
 
   const openEditModal = (merchant: Merchant) => {
-    setModal({ open: true, mode: 'edit', editingMerchant: merchant, formMounted: false });
+    setModal({ open: true, mode: 'edit', editingMerchant: merchant });
   };
 
   const handleModalCancel = () => {
-    setModal({ open: false, mode: 'create', editingMerchant: null, formMounted: false });
+    setModal({ open: false, mode: 'create', editingMerchant: null });
   };
 
-  const handleModalOk = async () => {
+  const handleCreateMerchant = async (values: MerchantFormValues) => {
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    await Service.getCases('createMerchant', {
+      signal: undefined,
+      endPointData: values,
+      token: jwt,
+    });
+    router.refresh();
+  };
+
+  const handleUpdateMerchant = async (values: MerchantFormValues) => {
+    if (!modal.editingMerchant) return;
+    const jwt = process.env.NEXT_PUBLIC_JWT;
+    await Service.getCases('updateMerchant', {
+      signal: undefined,
+      endPointData: { id: modal.editingMerchant.id, ...values },
+      token: jwt,
+    });
+
+    setMerchants((prev) => prev.map((m) => (m.id === modal.editingMerchant!.id ? ({ ...m, ...values } as Merchant) : m)));
+  };
+
+  const handleSubmit = async () => {
     setSubmitting(true);
     setError(null);
     try {
       const values = await form.validateFields();
 
       if (modal.mode === 'edit' && modal.editingMerchant) {
-        const jwt = process.env.NEXT_PUBLIC_JWT;
-        await Service.getCases('updateMerchant', {
-          signal: undefined,
-          endPointData: { id: modal.editingMerchant.id, ...values },
-          token: jwt,
-        });
-
-        setMerchants((prev) => prev.map((m) => (m.id === modal.editingMerchant!.id ? ({ ...m, ...values } as Merchant) : m)));
+        await handleUpdateMerchant(values);
       } else {
-        const jwt = process.env.NEXT_PUBLIC_JWT;
-        await Service.getCases('createMerchant', {
-          signal: undefined,
-          endPointData: values,
-          token: jwt,
-        });
-
-        try {
-          if (actions?.revalidate) {
-            await actions.revalidate();
-          } else {
-            setError('Acción del servidor de revalidación no disponible');
-          }
-        } catch (e) {
-          console.error('ERROR EN revalidate (merchant):', e);
-        }
+        await handleCreateMerchant(values);
       }
 
       setModal((m) => ({ ...m, open: false, editingMerchant: null }));
       form.resetFields();
-    } catch (err: any) {
-      if (err?.errorFields) return;
-      setError(err?.message ?? 'Error saving merchant');
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'errorFields' in err) return;
+      setError(getErrorMessage(err, 'Error saving merchant'));
     } finally {
       setSubmitting(false);
     }
@@ -222,91 +158,22 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
       });
 
       setMerchants((prev) => prev.filter((m) => m.id !== id));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('ERROR EN deleteMerchant:', err);
-      const errorMessage = err?.body?.message || err?.body?.error || err?.statusText || 'Ha ocurrido un error al eliminar el merchant';
-      setError(errorMessage);
+      setError(getErrorMessage(err, 'Ha ocurrido un error al eliminar el merchant'));
     }
   };
 
   const handleFillExample = () => {
     const index = exampleIndex;
 
-    if (modal.formMounted) {
-      form.setFieldsValue({
-        name: `merchantEjemplo${index}`,
-        address: `Direccion ejemplo ${index}`,
-        merchantType: (MERCHANT_TYPES[0]?.value as string) ?? '',
-      });
-    }
+    form.setFieldsValue({
+      name: `merchantEjemplo${index}`,
+      address: `Direccion ejemplo ${index}`,
+      merchantType: (MERCHANT_TYPES[0]?.value as string) ?? '',
+    });
 
     setExampleIndex((prev) => prev + 1);
-  };
-
-  const handleShowClient = async (merchant: Merchant) => {
-    try {
-      type MerchantsPageActions = {
-        list?: () => Promise<any>;
-        getById?: (id: string) => Promise<any>;
-        getByName?: (query: string) => Promise<any>;
-        getClientsOfMerchant?: (merchantId: string) => Promise<string[] | string>;
-        getClientById?: (id: string) => Promise<any>;
-        revalidate?: () => Promise<void>;
-      };
-
-      if (!actions?.getClientsOfMerchant) {
-        setError('Acción del servidor getClientsOfMerchant no disponible');
-        return;
-      }
-
-      const result = await actions.getClientsOfMerchant(merchant.id);
-      let clientIds: string[] = [];
-
-      if (Array.isArray(result)) {
-        clientIds = result as string[];
-      } else if (result == null) {
-        clientIds = [];
-      } else if (typeof result === 'string') {
-        const str = result as string;
-        const looksLikeId = /^[0-9a-zA-Z-]{6,}$/.test(str);
-        if (looksLikeId) {
-          clientIds = [str];
-        } else {
-          Modal.info({ title: 'Clientes asociados', content: <p>{str}</p> });
-          return;
-        }
-      } else {
-        Modal.info({ title: 'Clientes asociados', content: <p>Este merchant no tiene clientes asociados</p> });
-        return;
-      }
-
-      if (!clientIds.length) {
-        Modal.info({ title: 'Cliente asociado', content: <p>Este merchant no tiene clientes asociados</p> });
-        return;
-      }
-
-      const settled = await Promise.allSettled(clientIds.map((id) => fetchClientById(id, actions)));
-
-      const clients: Client[] = settled
-        .filter((r) => r.status === 'fulfilled')
-        .map((r) => (r as PromiseFulfilledResult<Client | null>).value)
-        .filter((c): c is Client => c !== null && c !== undefined);
-
-      Modal.info({
-        title: clientIds.length === 1 ? 'Cliente asociado' : 'Clientes asociados',
-        content: (
-          <div>
-            {clients.map((c) => (
-              <p key={c.id}>
-                {c.name} {c.surname} ({c.email})
-              </p>
-            ))}
-          </div>
-        ),
-      });
-    } catch (err: any) {
-      setError(err?.message ?? 'Error getting client of merchant');
-    }
   };
 
   return (
@@ -335,30 +202,41 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
 
       {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
 
-      <MerchantsTable merchants={merchants} loading={loading} onEdit={openEditModal} onDelete={(m) => handleDeleteMerchant(m.id)} onShowClient={handleShowClient} />
+      <MerchantsTable 
+        merchants={merchants} 
+        loading={loading} 
+        onEdit={openEditModal} 
+        onDelete={(m) => handleDeleteMerchant(m.id)} 
+        onShowClient={(m) => {
+          setSelectedMerchantForClients(m);
+          setClientsModalOpen(true);
+        }}
+      />
 
-  <Modal open={modal.open} title={modal.editingMerchant ? 'Edit merchant' : 'Create merchant'} onCancel={handleModalCancel} onOk={handleModalOk}>
+      <MerchantClientsModal
+        open={clientsModalOpen}
+        merchant={selectedMerchantForClients}
+        onClose={() => {
+          setClientsModalOpen(false);
+          setSelectedMerchantForClients(null);
+        }}
+      />
+
+      <Modal open={modal.open} title={modal.editingMerchant ? 'Edit merchant' : 'Create merchant'} onCancel={handleModalCancel} onOk={handleSubmit} footer={null}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
           <Button type="dashed" onClick={handleFillExample}>
             Rellenar datos de ejemplo
           </Button>
         </div>
 
-  <FormWrapper onMount={() => setModal((m) => ({ ...m, formMounted: true }))} onUnmount={() => setModal((m) => ({ ...m, formMounted: false }))}>
-          <Form form={form} layout="vertical">
-            <Form.Item label="Name" name="name" rules={[{ required: true, message: 'Please enter name' }]}>
-              <Input />
-            </Form.Item>
-
-            <Form.Item label="Address" name="address" rules={[{ required: true, message: 'Please enter address' }]}>
-              <Input />
-            </Form.Item>
-
-            <Form.Item label="Type" name="merchantType" rules={[{ required: true, message: 'Please select type' }]}>
-              <Select options={MERCHANT_TYPES} placeholder="Select a merchant type" />
-            </Form.Item>
-          </Form>
-        </FormWrapper>
+        <MerchantForm
+          form={form}
+          mode={modal.mode}
+          loading={submitting}
+          onSubmit={handleSubmit}
+          onFillExample={handleFillExample}
+          
+        />
       </Modal>
     </div>
   );

@@ -56,16 +56,6 @@ export async function getMerchantsByName(query: string): Promise<Merchant[]> {
   }
 }
 
-export async function revalidateMerchants(): Promise<void> {
-  'use server';
-  try {
-    revalidatePage('/merchants');
-  } catch (err) {
-    console.error('revalidateMerchants error', err);
-    throw err;
-  }
-}
-
 export async function getClientsOfMerchant(merchantId: string): Promise<string[] | string | null> {
   'use server';
   try {
@@ -91,6 +81,5 @@ export default {
   listMerchants,
   getMerchantById,
   getMerchantsByName,
-  revalidateMerchants,
   getClientsOfMerchant,
 };

@@ -1,5 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* Utility JSON types without using `any` */
 declare namespace Utility {
-
-    type JSONValue = Record<string, any>;
+    type JSONPrimitive = string | number | boolean | null;
+    /** Objects with unknown-ish values (keeps callers flexible for non-JSON runtime values) */
+    type JSONObject = { [key: string]: unknown };
+    type JSONArray = JSONValue[];
+    type JSONValue = JSONPrimitive | JSONObject | JSONArray;
 }

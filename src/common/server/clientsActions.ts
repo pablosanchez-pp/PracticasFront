@@ -71,37 +71,9 @@ export async function getClientsByEmail(email: string): Promise<Client[]> {
   }
 }
 
-export async function revalidateClients(): Promise<void> {
-  'use server';
-  try {
-    revalidatePage('/clients');
-  } catch (err) {
-    console.error('revalidateClients error', err);
-    throw err;
-  }
-}
-
-export async function listMerchant(clientId: string): Promise<string[]> {
-  'use server';
-  try {
-    const res = await Service.getCases('listMerchant', {
-      signal: undefined,
-      endPointData: { clientId },
-      token: SERVER_JWT,
-    });
-
-    return Array.isArray(res) ? (res as string[]) : [];
-  } catch (err) {
-    console.error('listMerchant error', err);
-    throw err;
-  }
-}
-
 export default {
   listClients,
   getClientById,
   getClientsByName,
   getClientsByEmail,
-  revalidateClients,
-  listMerchant,
 };

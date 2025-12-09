@@ -16,25 +16,9 @@ interface ClientFormProps {
   loading: boolean;
   onSubmit: (values: ClientFormValues) => void;
   onFillExample: () => void;
-  onMount?: () => void;
-  onUnmount?: () => void;
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({
-  form,
-  mode,
-  loading,
-  onSubmit,
-  onFillExample,
-  onMount,
-  onUnmount,
-}) => {
-  useEffect(() => {
-    onMount?.();
-    return () => {
-      onUnmount?.();
-    };
-  }, [onMount, onUnmount]);
+const ClientForm: React.FC<ClientFormProps> = ({ form, mode, loading, onSubmit, onFillExample }) => {
   return (
     <>
       {/* Botón para rellenar datos de ejemplo */}

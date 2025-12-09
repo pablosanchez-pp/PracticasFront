@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { Spin } from 'antd';
 import MerchantsPageServer from '@/common/pages/merchantPageServer';
 
-export default async function MerchantPage({ searchParams }: { searchParams?: Record<string, any> }) {
+export default async function MerchantPage({ searchParams }: { searchParams?: Record<string, unknown> }) {
   return (
     <Suspense
       fallback={
