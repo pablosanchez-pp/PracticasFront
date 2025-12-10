@@ -1,9 +1,8 @@
 'use client';
 
 import { Form, Input, Button } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { Client } from '@/domain/client';
-import type { FormInstance } from 'antd/es/form';
 
 export type ClientFormValues = Pick<
   Client,
@@ -11,24 +10,45 @@ export type ClientFormValues = Pick<
 >;
 
 interface ClientFormProps {
-  form: FormInstance<ClientFormValues>;
-  mode: 'create' | 'edit';
-  loading: boolean;
-  onSubmit: (values: ClientFormValues) => void;
-  onFillExample: () => void;
+  initialValues?: ClientFormValues;
+  mode?: 'create' | 'edit';
+  loading?: boolean;
+  onSubmit?: (values: ClientFormValues) => void;
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({ form, mode, loading, onSubmit, onFillExample }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ initialValues, mode = 'create', loading = false, onSubmit }) => {
+  const [form] = Form.useForm<ClientFormValues>();
+  const [exampleIndex, setExampleIndex] = useState(1);
+
+  useEffect(() => {
+    if (initialValues) {
+      form.setFieldsValue(initialValues);
+    } else {
+      form.resetFields();
+    }
+  }, [initialValues, form]);
+
+  const handleFillExample = () => {
+    const index = exampleIndex;
+    form.setFieldsValue({
+      name: `nomEjemplo${index}`,
+      surname: `apellido${index}`,
+      email: `ej${index}@example.com`,
+      phone: `60000000${index}`,
+      cifNifNie: `X000000${index}A`,
+    });
+    setExampleIndex((prev) => prev + 1);
+  };
   return (
     <>
       {/* Botón para rellenar datos de ejemplo */}
       <div className="mb-4 flex justify-end">
-        <Button type="dashed" onClick={onFillExample}>
+        <Button type="dashed" onClick={handleFillExample}>
           Rellenar datos de ejemplo
         </Button>
       </div>
 
-      <Form<ClientFormValues> form={form} layout="vertical" onFinish={onSubmit}>
+  <Form<ClientFormValues> form={form} layout="vertical" onFinish={(values) => onSubmit && onSubmit(values)}>
         <Form.Item
           name="name"
           label="Nombre"

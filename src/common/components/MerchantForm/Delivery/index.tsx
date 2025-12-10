@@ -1,7 +1,7 @@
 'use client';
 
 import { Form, Input, Select, Button } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { FormInstance } from 'antd/es/form';
 
@@ -12,17 +12,57 @@ export type MerchantFormValues = {
 };
 
 interface MerchantFormProps {
-  form: FormInstance<MerchantFormValues>;
-  mode: 'create' | 'edit';
-  loading: boolean;
-  onSubmit: (values: MerchantFormValues) => void;
+  initialValues?: MerchantFormValues;
+  mode?: 'create' | 'edit';
+  loading?: boolean;
+  onSubmit?: (values: MerchantFormValues) => void;
   onFillExample?: () => void;
+  // Some pages use the name `handleFillExample` — accept that too as an alias.
+  handleFillExample?: () => void;
 }
 
-const MerchantCreateForm: React.FC<MerchantFormProps> = ({ form, mode, loading, onSubmit, onFillExample }) => {
+const MerchantCreateForm: React.FC<MerchantFormProps> = ({ initialValues, mode = 'create', loading = false, onSubmit, onFillExample, handleFillExample: handleFillExampleProp }) => {
+  const [form] = Form.useForm<MerchantFormValues>();
+  const [exampleIndex, setExampleIndex] = useState(1);
+
+  useEffect(() => {
+    if (initialValues) {
+      form.setFieldsValue(initialValues);
+    } else {
+      form.resetFields();
+    }
+  }, [initialValues, form]);
+
+  const handleFillExample = () => {
+    // If parent provided a handler, prefer that so pages can control example data
+    if (typeof handleFillExampleProp === 'function') {
+      handleFillExampleProp();
+      return;
+    }
+
+    if (typeof onFillExample === 'function') {
+      onFillExample();
+      return;
+    }
+
+    const index = exampleIndex;
+    form.setFieldsValue({
+      name: `merchantEjemplo${index}`,
+      address: `Direccion ejemplo ${index}`,
+      merchantType: (MERCHANT_TYPES[0]?.value as string) ?? '',
+    });
+    setExampleIndex((p) => p + 1);
+  };
 
   return (
-    <Form<MerchantFormValues> form={form} layout="vertical" onFinish={onSubmit}>
+    <>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <Button type="dashed" onClick={handleFillExample}>
+          Rellenar datos de ejemplo
+        </Button>
+      </div>
+
+      <Form<MerchantFormValues> form={form} layout="vertical" onFinish={(values) => onSubmit && onSubmit(values)}>
       <Form.Item
         name="name"
         label="Name"
@@ -53,6 +93,7 @@ const MerchantCreateForm: React.FC<MerchantFormProps> = ({ form, mode, loading, 
         </Button>
       </Form.Item>
     </Form>
+    </>
   );
 };
 

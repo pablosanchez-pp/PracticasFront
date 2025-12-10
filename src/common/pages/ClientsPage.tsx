@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
-import type { Merchant } from '@/domain/merchant';
 
-import { Spin, Alert, Typography, Input, Button, Form, Tooltip, Modal } from 'antd';
+import { Spin, Alert, Typography, Input, Button, Tooltip, Modal } from 'antd';
 
 import ClientsTable from '../components/ClientTable/Delivery';
-import { getErrorMessage, isAbortError, getErrorStatus } from '@/common/utils/errorHelpers';
+import { getErrorMessage, isAbortError } from '@/common/utils/errorHelpers';
 
 import ClientForm, { ClientFormValues } from '../components/ClientForm/Delivery';
 import ClientMerchantsModal from '../components/ClientMerchantModal/Delivery';
+
+import { revalidatePage } from '@/common/utils/revalidatePath';
 
 const { Title } = Typography;
 
@@ -24,12 +25,13 @@ type ClientsPageActions = {
 };
 
 const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }> = ({ initialClients, actions }) => {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  const loading = false;
+  const [error, setError] = useState<string | null>(
+    initialClients && Array.isArray(initialClients) ? null : 'No hay acción del servidor para obtener clientes'
+  );
 
   const [search, setSearch] = useState({ name: '', email: '' });
-  const [form] = Form.useForm<ClientFormValues>();
   const [modal, setModal] = useState<{
     open: boolean;
     mode: 'create' | 'edit';
@@ -38,50 +40,13 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
   
   const [submitting, setSubmitting] = useState(false);
 
-  const [exampleIndex, setExampleIndex] = useState(1);
+  
   const router = useRouter();
 
   const [merchantsModalOpen, setMerchantsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-
-  // client merchants are now handled by the modal's infra functions
-
-  useEffect(() => {
-    if (initialClients && Array.isArray(initialClients)) {
-      setClients(initialClients);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    setClients([]);
-    setLoading(false);
-    setError('No hay acción del servidor para obtener clientes');
-  }, [initialClients]);
-
-  useEffect(() => {
-    if (modal.open && modal.editingClient) {
-      form.setFieldsValue({
-        name: modal.editingClient.name,
-        surname: modal.editingClient.surname,
-        email: modal.editingClient.email,
-        phone: modal.editingClient.phone,
-        cifNifNie: modal.editingClient.cifNifNie,
-      });
-      return;
-    }
-
-    if (modal.open && !modal.editingClient) {
-      form.resetFields();
-      return;
-    }
-
-    if (!modal.open) {
-      form.resetFields();
-    }
-  }, [modal.open, modal.editingClient, form]);
   
   const handleSearchByName = (term?: string) => {
-    // Navigate to server-driven page with name query param
     setSearch((s) => ({ ...s, email: '' }));
     const name = (term ?? search.name).trim();
     const base = '/clients';
@@ -118,10 +83,9 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
         token: jwt,
       });
 
-      router.refresh();
+  revalidatePage('/clients');
 
-      form.resetFields();
-      setModal((m) => ({ ...m, open: false, editingClient: null }));
+  setModal((m) => ({ ...m, open: false, editingClient: null }));
     } catch (err: unknown) {
       if (isAbortError(err)) return;
       console.error('ERROR EN createClient:', err);
@@ -146,7 +110,9 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
         token: jwt,
       });
 
-      setClients((prev) => prev.filter((c) => c.id !== id));
+  
+      revalidatePage('/clients');
+      
     } catch (err: unknown) {
       console.error('ERROR EN deleteClient:', err);
       setError(getErrorMessage(err, 'Ha ocurrido un error al eliminar el cliente'));
@@ -181,12 +147,10 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
         token: jwt,
       });
 
-      const updatedClient = updated as Client;
+  
+  revalidatePage('/clients');
 
-      setClients((prev) => prev.map((c) => (c.id === updatedClient.id ? updatedClient : c)));
-
-      setModal((m) => ({ ...m, open: false, editingClient: null }));
-      form.resetFields();
+  setModal((m) => ({ ...m, open: false, editingClient: null }));
     } catch (err: unknown) {
       console.error('ERROR EN updateClient:', err);
       setError(getErrorMessage(err, 'Ha ocurrido un error al actualizar el cliente'));
@@ -203,19 +167,7 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
     }
   };
 
-  const handleFillExample = () => {
-    const index = exampleIndex;
-
-    form.setFieldsValue({
-      name: `nomEjemplo${index}`,
-      surname: `apellido${index}`,
-      email: `ej${index}@example.com`,
-      phone: `60000000${index}`,
-      cifNifNie: `X000000${index}A`,
-    });
-
-    setExampleIndex((prev) => prev + 1);
-  };
+  // fill-example behaviour moved inside ClientForm
 
   const openMerchantsModal = (client: Client) => {
     setSelectedClient(client);
@@ -258,7 +210,6 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
               type="primary"
               onClick={() => {
                 setModal((m) => ({ ...m, open: true, mode: 'create', editingClient: null }));
-                setExampleIndex(1);
               }}
               className="shrink-0"
             >
@@ -286,7 +237,7 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
             </div>
           ) : (
             <ClientsTable
-              clients={clients}
+              clients={initialClients ?? []}
               onEdit={handleEditClient}
               onDelete={handleDeleteClient}
               onOpenMerchants={openMerchantsModal}
@@ -306,18 +257,21 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
           open={modal.open}
           title={modal.mode === 'create' ? 'Crear cliente' : 'Editar cliente'}
           onCancel={() => {
-            setModal((m) => ({ ...m, open: false, editingClient: null }));
-            form.resetFields();
+          setModal((m) => ({ ...m, open: false, editingClient: null }));
           }}
           footer={null}
         >
           <ClientForm
-            form={form}
+            initialValues={modal.editingClient ? {
+              name: modal.editingClient.name,
+              surname: modal.editingClient.surname,
+              email: modal.editingClient.email,
+              phone: modal.editingClient.phone,
+              cifNifNie: modal.editingClient.cifNifNie,
+            } : undefined}
             mode={modal.mode}
             loading={submitting}
             onSubmit={handleSubmit}
-            onFillExample={handleFillExample}
-            
           />
         </Modal>
 

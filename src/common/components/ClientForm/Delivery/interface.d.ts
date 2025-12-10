@@ -7,10 +7,9 @@ export type ClientFormValues = Pick<
 >;
 
 export interface ClientFormProps {
-  form: FormInstance<ClientFormValues>;
-  mode: 'create' | 'edit';
-  loading: boolean;
-  onSubmit: (values: ClientFormValues) => void;
-  onFillExample: () => void;
+  initialValues?: ClientFormValues;
+  mode?: 'create' | 'edit';
+  loading?: boolean;
+  onSubmit?: (values: ClientFormValues) => void;
   // Lifecycle hooks moved to Infrastructure; not required here
 }

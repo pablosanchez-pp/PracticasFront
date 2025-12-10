@@ -42,7 +42,6 @@ export async function getMerchantById(id: string): Promise<Merchant | null> {
 export async function getMerchantsByName(query: string): Promise<Merchant[]> {
   'use server';
   try {
-    // keep the param name consistent with client hook (nombre)
     const res = await Service.getCases('getMerchantByName', {
       signal: undefined,
       endPointData: { nombre: query },
@@ -65,12 +64,14 @@ export async function getClientsOfMerchant(merchantId: string): Promise<string[]
       token: SERVER_JWT,
     });
 
-    // Service may return a string or an array of strings; normalize to that shape or null
-    if (res == null) return null;
-    if (typeof res === 'string') return res as string;
-    if (Array.isArray(res)) return res as string[];
-    // otherwise try to coerce where possible
+    if (res == null) 
+      return null;
+    if (typeof res === 'string') 
+      return res as string;
+    if (Array.isArray(res)) 
+      return res as string[];
     return null;
+    
   } catch (err) {
     console.error('getClientsOfMerchant error', err);
     throw err;

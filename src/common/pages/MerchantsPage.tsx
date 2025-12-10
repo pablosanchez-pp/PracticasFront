@@ -1,15 +1,16 @@
  'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {Alert, Typography, Input, Button, Modal, Form} from 'antd';
+import {Alert, Typography, Input, Button, Modal} from 'antd';
 import type { Merchant } from '@/domain/merchant';
 import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { Client } from '@/domain/client';
 import MerchantsTable from '../components/MerchantTable/Delivery';
 import MerchantForm from '../components/MerchantForm/Delivery';
 import Service from '@/service/src';
-import { getErrorMessage, isAbortError, getErrorStatus } from '@/common/utils/errorHelpers';
+import { getErrorMessage } from '@/common/utils/errorHelpers';
+import { revalidatePage } from '@/common/utils/revalidatePath';
 import MerchantClientsModal from '@/common/components/MerchantClientsModal/Delivery';
 
 const { Title } = Typography;
@@ -29,54 +30,21 @@ type MerchantsPageActions = {
 };
 
 const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: MerchantsPageActions }> = ({initialMerchants,actions,}) => {
-  const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const loading = false;
+  const [error, setError] = useState<string | null>(
+    initialMerchants && Array.isArray(initialMerchants) ? null : 'No hay acción del servidor para obtener merchants'
+  );
 
   const [modal, setModal] = useState<{
     open: boolean;
     mode: 'create' | 'edit';
     editingMerchant: Merchant | null;
   }>({ open: false, mode: 'create', editingMerchant: null });
-  const [form] = Form.useForm<MerchantFormValues>();
-  const [exampleIndex, setExampleIndex] = useState(1);
   const [search, setSearch] = useState({ name: '' });
   const [submitting, setSubmitting] = useState(false);
   const [clientsModalOpen, setClientsModalOpen] = useState(false);
   const [selectedMerchantForClients, setSelectedMerchantForClients] = useState<Merchant | null>(null);
   const router = useRouter();
-
-  useEffect(() => {
-    if (initialMerchants && Array.isArray(initialMerchants)) {
-      setMerchants(initialMerchants);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    setMerchants([]);
-    setLoading(false);
-    setError('No hay acción del servidor para obtener merchants');
-  }, [initialMerchants]);
-
-  useEffect(() => {
-    if (modal.open && modal.editingMerchant) {
-      form.setFieldsValue({
-        name: modal.editingMerchant.name,
-        address: modal.editingMerchant.address,
-        merchantType: modal.editingMerchant.merchantType,
-      });
-      return;
-    }
-
-    if (modal.open && !modal.editingMerchant) {
-      form.resetFields();
-      return;
-    }
-
-    if (!modal.open) {
-      form.resetFields();
-    }
-  }, [modal.open, modal.editingMerchant, form]);
 
   const handleSearchByName = async (term?: string) => {
     setSearch((s) => ({ ...s }));
@@ -91,7 +59,6 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
 
   const openCreateModal = () => {
     setModal({ open: true, mode: 'create', editingMerchant: null });
-    setExampleIndex(1);
   };
 
   const openEditModal = (merchant: Merchant) => {
@@ -109,7 +76,8 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
       endPointData: values,
       token: jwt,
     });
-    router.refresh();
+
+    revalidatePage('/merchants');
   };
 
   const handleUpdateMerchant = async (values: MerchantFormValues) => {
@@ -121,15 +89,13 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
       token: jwt,
     });
 
-    setMerchants((prev) => prev.map((m) => (m.id === modal.editingMerchant!.id ? ({ ...m, ...values } as Merchant) : m)));
+    revalidatePage('/merchants');
   };
 
-  const handleSubmit = async () => {
+  const handleFormSubmit = async (values: MerchantFormValues) => {
     setSubmitting(true);
     setError(null);
     try {
-      const values = await form.validateFields();
-
       if (modal.mode === 'edit' && modal.editingMerchant) {
         await handleUpdateMerchant(values);
       } else {
@@ -137,9 +103,7 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
       }
 
       setModal((m) => ({ ...m, open: false, editingMerchant: null }));
-      form.resetFields();
     } catch (err: unknown) {
-      if (typeof err === 'object' && err !== null && 'errorFields' in err) return;
       setError(getErrorMessage(err, 'Error saving merchant'));
     } finally {
       setSubmitting(false);
@@ -157,24 +121,14 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
         token: jwt,
       });
 
-      setMerchants((prev) => prev.filter((m) => m.id !== id));
+      revalidatePage('/merchants');
     } catch (err: unknown) {
       console.error('ERROR EN deleteMerchant:', err);
       setError(getErrorMessage(err, 'Ha ocurrido un error al eliminar el merchant'));
     }
   };
 
-  const handleFillExample = () => {
-    const index = exampleIndex;
-
-    form.setFieldsValue({
-      name: `merchantEjemplo${index}`,
-      address: `Direccion ejemplo ${index}`,
-      merchantType: (MERCHANT_TYPES[0]?.value as string) ?? '',
-    });
-
-    setExampleIndex((prev) => prev + 1);
-  };
+  // fill-example behaviour moved into MerchantForm
 
   return (
     <div>
@@ -203,7 +157,7 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
       {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
 
       <MerchantsTable 
-        merchants={merchants} 
+        merchants={initialMerchants ?? []} 
         loading={loading} 
         onEdit={openEditModal} 
         onDelete={(m) => handleDeleteMerchant(m.id)} 
@@ -222,20 +176,12 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
         }}
       />
 
-      <Modal open={modal.open} title={modal.editingMerchant ? 'Edit merchant' : 'Create merchant'} onCancel={handleModalCancel} onOk={handleSubmit} footer={null}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-          <Button type="dashed" onClick={handleFillExample}>
-            Rellenar datos de ejemplo
-          </Button>
-        </div>
-
+      <Modal open={modal.open} title={modal.editingMerchant ? 'Edit merchant' : 'Create merchant'} onCancel={handleModalCancel} footer={null}>
         <MerchantForm
-          form={form}
+          initialValues={modal.editingMerchant ? { name: modal.editingMerchant.name, address: modal.editingMerchant.address, merchantType: modal.editingMerchant.merchantType } : undefined}
           mode={modal.mode}
           loading={submitting}
-          onSubmit={handleSubmit}
-          onFillExample={handleFillExample}
-          
+          onSubmit={handleFormSubmit}
         />
       </Modal>
     </div>
