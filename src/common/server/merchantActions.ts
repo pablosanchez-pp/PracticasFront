@@ -1,14 +1,13 @@
+'use server';
+
 import Service from '@/service/src';
 import type { Merchant } from '@/domain/merchant';
-import type { Client } from '@/domain/client';
-import { revalidatePage } from '@/common/utils/revalidatePath';
 
 const SERVER_JWT = process.env.BACKEND_JWT ?? process.env.NEXT_PUBLIC_JWT;
 
 type ListParams = Record<string, unknown> | undefined;
 
 export async function listMerchants(params?: ListParams): Promise<Merchant[]> {
-  'use server';
   try {
     const res = await Service.getCases('getMerchant', {
       signal: undefined,
@@ -24,7 +23,6 @@ export async function listMerchants(params?: ListParams): Promise<Merchant[]> {
 }
 
 export async function getMerchantById(id: string): Promise<Merchant | null> {
-  'use server';
   try {
     const res = await Service.getCases('getMerchantById', {
       signal: undefined,
@@ -40,7 +38,6 @@ export async function getMerchantById(id: string): Promise<Merchant | null> {
 }
 
 export async function getMerchantsByName(query: string): Promise<Merchant[]> {
-  'use server';
   try {
     const res = await Service.getCases('getMerchantByName', {
       signal: undefined,
@@ -56,7 +53,6 @@ export async function getMerchantsByName(query: string): Promise<Merchant[]> {
 }
 
 export async function getClientsOfMerchant(merchantId: string): Promise<string[] | string | null> {
-  'use server';
   try {
     const res = await Service.getCases('getClientOfMerchant', {
       signal: undefined,
@@ -77,10 +73,3 @@ export async function getClientsOfMerchant(merchantId: string): Promise<string[]
     throw err;
   }
 }
-
-export default {
-  listMerchants,
-  getMerchantById,
-  getMerchantsByName,
-  getClientsOfMerchant,
-};

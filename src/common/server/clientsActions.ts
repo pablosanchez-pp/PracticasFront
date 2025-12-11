@@ -1,13 +1,13 @@
+'use server'
+
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
-import { revalidatePage } from '@/common/utils/revalidatePath';
 
 const SERVER_JWT = process.env.BACKEND_JWT ?? process.env.NEXT_PUBLIC_JWT;
 
 type ListParams = Record<string, unknown> | undefined;
 
 export async function listClients(params?: ListParams): Promise<Client[]> {
-  'use server';
   try {
     const res = await Service.getCases('getClient', {
       signal: undefined,
@@ -23,7 +23,6 @@ export async function listClients(params?: ListParams): Promise<Client[]> {
 }
 
 export async function getClientById(id: string): Promise<Client | null> {
-  'use server';
   try {
     const res = await Service.getCases('getClientById', {
       signal: undefined,
@@ -40,7 +39,6 @@ export async function getClientById(id: string): Promise<Client | null> {
 
 
 export async function getClientsByName(query: string): Promise<Client[]> {
-  'use server';
   try {
     const res = await Service.getCases('getClientByName', {
       signal: undefined,
@@ -56,7 +54,6 @@ export async function getClientsByName(query: string): Promise<Client[]> {
 }
 
 export async function getClientsByEmail(email: string): Promise<Client[]> {
-  'use server';
   try {
     const res = await Service.getCases('getClientByEmail', {
       signal: undefined,
@@ -71,9 +68,3 @@ export async function getClientsByEmail(email: string): Promise<Client[]> {
   }
 }
 
-export default {
-  listClients,
-  getClientById,
-  getClientsByName,
-  getClientsByEmail,
-};

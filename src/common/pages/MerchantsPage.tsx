@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {Alert, Typography, Input, Button, Modal} from 'antd';
 import type { Merchant } from '@/domain/merchant';
-import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { Client } from '@/domain/client';
 import MerchantsTable from '../components/MerchantTable/Delivery';
 import MerchantForm from '../components/MerchantForm/Delivery';
-import { getErrorMessage } from '@/common/utils/errorHelpers';
 import { revalidatePage } from '@/common/utils/revalidatePath';
 import MerchantClientsModal from '@/common/components/MerchantClientsModal/Delivery';
 
@@ -67,10 +65,6 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
   const handleModalCancel = () => {
     setModal({ open: false, mode: 'create', editingMerchant: null });
   };
-
-  // create/update/delete logic moved to MerchantForm / MerchantTable infra; page only orchestrates open/close and revalidate
-
-  // fill-example behaviour moved into MerchantForm
 
   return (
     <div>

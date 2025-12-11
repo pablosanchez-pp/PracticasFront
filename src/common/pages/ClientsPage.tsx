@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Client } from '@/domain/client';
 
-import { Spin, Alert, Typography, Input, Button, Tooltip, Modal } from 'antd';
+import { Spin, Alert, Typography, Input, Button, Modal } from 'antd';
 
 import ClientsTable from '../components/ClientTable/Delivery';
 
