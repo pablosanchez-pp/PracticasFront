@@ -8,7 +8,6 @@ import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { Client } from '@/domain/client';
 import MerchantsTable from '../components/MerchantTable/Delivery';
 import MerchantForm from '../components/MerchantForm/Delivery';
-import Service from '@/service/src';
 import { getErrorMessage } from '@/common/utils/errorHelpers';
 import { revalidatePage } from '@/common/utils/revalidatePath';
 import MerchantClientsModal from '@/common/components/MerchantClientsModal/Delivery';
@@ -69,64 +68,7 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
     setModal({ open: false, mode: 'create', editingMerchant: null });
   };
 
-  const handleCreateMerchant = async (values: MerchantFormValues) => {
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    await Service.getCases('createMerchant', {
-      signal: undefined,
-      endPointData: values,
-      token: jwt,
-    });
-
-    revalidatePage('/merchants');
-  };
-
-  const handleUpdateMerchant = async (values: MerchantFormValues) => {
-    if (!modal.editingMerchant) return;
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    await Service.getCases('updateMerchant', {
-      signal: undefined,
-      endPointData: { id: modal.editingMerchant.id, ...values },
-      token: jwt,
-    });
-
-    revalidatePage('/merchants');
-  };
-
-  const handleFormSubmit = async (values: MerchantFormValues) => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      if (modal.mode === 'edit' && modal.editingMerchant) {
-        await handleUpdateMerchant(values);
-      } else {
-        await handleCreateMerchant(values);
-      }
-
-      setModal((m) => ({ ...m, open: false, editingMerchant: null }));
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Error saving merchant'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteMerchant = async (id: Merchant['id']) => {
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    setError(null);
-
-    try {
-      await Service.getCases('deleteMerchant', {
-        signal: undefined,
-        endPointData: { id },
-        token: jwt,
-      });
-
-      revalidatePage('/merchants');
-    } catch (err: unknown) {
-      console.error('ERROR EN deleteMerchant:', err);
-      setError(getErrorMessage(err, 'Ha ocurrido un error al eliminar el merchant'));
-    }
-  };
+  // create/update/delete logic moved to MerchantForm / MerchantTable infra; page only orchestrates open/close and revalidate
 
   // fill-example behaviour moved into MerchantForm
 
@@ -160,7 +102,7 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
         merchants={initialMerchants ?? []} 
         loading={loading} 
         onEdit={openEditModal} 
-        onDelete={(m) => handleDeleteMerchant(m.id)} 
+        onDeleteSuccess={() => revalidatePage('/merchants')}
         onShowClient={(m) => {
           setSelectedMerchantForClients(m);
           setClientsModalOpen(true);
@@ -176,12 +118,13 @@ const MerchantsPage: React.FC<{ initialMerchants?: Merchant[]; actions?: Merchan
         }}
       />
 
-      <Modal open={modal.open} title={modal.editingMerchant ? 'Edit merchant' : 'Create merchant'} onCancel={handleModalCancel} footer={null}>
+      <Modal open={modal.open} title={modal.editingMerchant ? 'Edit merchant' : 'Create merchant'} onCancel={handleModalCancel} footer={null} destroyOnClose>
         <MerchantForm
           initialValues={modal.editingMerchant ? { name: modal.editingMerchant.name, address: modal.editingMerchant.address, merchantType: modal.editingMerchant.merchantType } : undefined}
           mode={modal.mode}
-          loading={submitting}
-          onSubmit={handleFormSubmit}
+          editingId={modal.editingMerchant?.id}
+          onClose={handleModalCancel}
+          onSuccess={() => revalidatePage('/merchants')}
         />
       </Modal>
     </div>

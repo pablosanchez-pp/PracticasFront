@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
-import { Table, Button, Tooltip } from 'antd';
+import { Table, Button, Tooltip, Modal } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
 import type { Merchant } from '@/domain/merchant';
 import { EditOutlined, DeleteOutlined, UserOutlined} from '@ant-design/icons';
+import { deleteMerchant } from '../Infrastructure/requests';
 
 import { MerchantsTableProps } from './interface';
 
@@ -12,9 +13,26 @@ const MerchantsTable: React.FC<MerchantsTableProps> = ({
   merchants,
   loading,
   onEdit,
-  onDelete,
   onShowClient,
+  onDeleteSuccess,
 }) => {
+  const { confirm } = Modal;
+
+  const handleDelete = (merchant: Merchant) => {
+    confirm({
+      title: '¿Eliminar merchant?',
+      content: 'Esta acción no se puede deshacer.',
+      onOk: async () => {
+        try {
+          await deleteMerchant(merchant.id);
+          onDeleteSuccess?.();
+        } catch (err: unknown) {
+          const msg = (err instanceof Error) ? err.message : 'Error eliminando merchant';
+          Modal.error({ title: 'Error', content: msg });
+        }
+      },
+    });
+  };
   const columns: ColumnsType<Merchant> = [
     {
       title: 'Name',
@@ -81,7 +99,7 @@ const MerchantsTable: React.FC<MerchantsTableProps> = ({
               danger
               ghost              
               icon={<DeleteOutlined />}
-              onClick={() => onDelete && onDelete(record)}
+              onClick={() => handleDelete(record)}
             />
           </Tooltip>
 

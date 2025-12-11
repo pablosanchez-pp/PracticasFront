@@ -1,21 +1,42 @@
 'use client';
 
-import { Table, Input, Button, Tooltip } from 'antd';
+import { Table, Input, Button, Tooltip, Modal } from 'antd';
 import { DeleteOutlined, EditOutlined, ApartmentOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Client } from '@/domain/client';
+import { getErrorMessage } from '@/common/utils/errorHelpers';
 import type { ClientsTableProps } from './interface';
+import { deleteClient } from '../Infraestructure/request';
+
 
 const ClientsTable = ({
   clients,
   onEdit,
-  onDelete,
   onOpenMerchants,
   searchEmail,
   onEmailChange,
   onEmailPressEnter,
   onEmailClear,
+  onDeleteSuccess,
 }: ClientsTableProps) => {
+  const { confirm } = Modal;
+
+  const handleDelete = (id: string) => {
+    confirm({
+      title: '¿Eliminar cliente?',
+      content: 'Esta acción no se puede deshacer.',
+      onOk: async () => {
+        try {
+          await deleteClient(id);
+          onDeleteSuccess?.();
+        } catch (err: unknown) {
+          const msg = getErrorMessage(err, 'Ha ocurrido un error al eliminar el cliente');
+          Modal.error({ title: 'Error', content: msg });
+        }
+      },
+    });
+  };
+
   const columns: ColumnsType<Client> = [
     {
       title: 'Nombre',
@@ -54,7 +75,7 @@ const ClientsTable = ({
           </Tooltip>
 
           <Tooltip title="Eliminar">
-            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => onDelete(record.id)} />
+            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
           </Tooltip>
 
           <Tooltip title="Ver / asociar merchants">

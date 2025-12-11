@@ -2,16 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 
 import { Spin, Alert, Typography, Input, Button, Tooltip, Modal } from 'antd';
 
 import ClientsTable from '../components/ClientTable/Delivery';
-import { getErrorMessage, isAbortError } from '@/common/utils/errorHelpers';
 
 import ClientForm from '../components/ClientForm/Delivery';
-import { ClientFormValues } from '../components/ClientForm/Delivery/interface';
 import ClientMerchantsModal from '../components/ClientMerchantModal/Delivery';
 
 import { revalidatePage } from '@/common/utils/revalidatePath';
@@ -39,9 +36,7 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
     editingClient: Client | null;
   }>({ open: false, mode: 'create', editingClient: null });
   
-  const [submitting, setSubmitting] = useState(false);
 
-  
   const router = useRouter();
 
   const [merchantsModalOpen, setMerchantsModalOpen] = useState(false);
@@ -69,106 +64,9 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
     router.replace(`${base}?email=${encodeURIComponent(email)}`);
   };
 
-  const handleCreateClient = async (values: ClientFormValues) => {
-    setError(null);
-    setSubmitting(true);
-
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-      try {
-      await Service.getCases('createClient', {
-        signal,
-        endPointData: values,
-        token: jwt,
-      });
-
-  revalidatePage('/clients');
-
-  setModal((m) => ({ ...m, open: false, editingClient: null }));
-    } catch (err: unknown) {
-      if (isAbortError(err)) return;
-      console.error('ERROR EN createClient:', err);
-      setError(getErrorMessage(err, 'Ha ocurrido un error al crear el cliente'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteClient = async (id: Client['id']) => {
-
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    setError(null);
-
-    try {
-      await Service.getCases('deleteClient', {
-        signal,
-        endPointData: { id },
-        token: jwt,
-      });
-
-  
-      revalidatePage('/clients');
-      
-    } catch (err: unknown) {
-      console.error('ERROR EN deleteClient:', err);
-      setError(getErrorMessage(err, 'Ha ocurrido un error al eliminar el cliente'));
-    }
-  };
-
   const handleEditClient = (client: Client) => {
     setModal((m) => ({ ...m, open: true, mode: 'edit', editingClient: client }));
   };
-
-  const handleUpdateClient = async (values: ClientFormValues) => {
-    if (!modal.editingClient) return;
-
-    const jwt = process.env.NEXT_PUBLIC_JWT;
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-  setError(null);
-  setSubmitting(true);
- 
-    try {
-      const updated = await Service.getCases('updateClient', {
-        signal,
-        endPointData: {
-          id: modal.editingClient.id,
-          name: values.name,
-          surname: values.surname,
-          email: values.email,
-          phone: values.phone,
-          cifNifNie: values.cifNifNie,
-        },
-        token: jwt,
-      });
-
-  
-  revalidatePage('/clients');
-
-  setModal((m) => ({ ...m, open: false, editingClient: null }));
-    } catch (err: unknown) {
-      console.error('ERROR EN updateClient:', err);
-      setError(getErrorMessage(err, 'Ha ocurrido un error al actualizar el cliente'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSubmit = (values: ClientFormValues) => {
-    if (modal.mode === 'create') {
-      handleCreateClient(values);
-    } else {
-      handleUpdateClient(values);
-    }
-  };
-
-  // fill-example behaviour moved inside ClientForm
 
   const openMerchantsModal = (client: Client) => {
     setSelectedClient(client);
@@ -240,7 +138,7 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
             <ClientsTable
               clients={initialClients ?? []}
               onEdit={handleEditClient}
-              onDelete={handleDeleteClient}
+              onDeleteSuccess={() => revalidatePage('/clients')}
               onOpenMerchants={openMerchantsModal}
               searchEmail={search.email}
               onEmailChange={(val) => setSearch({ name: '', email: val })}
@@ -258,9 +156,10 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
           open={modal.open}
           title={modal.mode === 'create' ? 'Crear cliente' : 'Editar cliente'}
           onCancel={() => {
-          setModal((m) => ({ ...m, open: false, editingClient: null }));
+            setModal((m) => ({ ...m, open: false, editingClient: null }));
           }}
           footer={null}
+          destroyOnClose
         >
           <ClientForm
             initialValues={modal.editingClient ? {
@@ -271,8 +170,11 @@ const Hola: React.FC<{ initialClients?: Client[]; actions?: ClientsPageActions }
               cifNifNie: modal.editingClient.cifNifNie,
             } : undefined}
             mode={modal.mode}
-            loading={submitting}
-            onSubmit={handleSubmit}
+            editingId={modal.editingClient?.id}
+            onClose={() => setModal((m) => ({ ...m, open: false, editingClient: null }))}
+            onSuccess={() => {
+              revalidatePage('/clients');
+            }}
           />
         </Modal>
 

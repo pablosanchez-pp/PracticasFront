@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Modal, Spin } from 'antd';
-import type { Merchant } from '@/domain/merchant';
 import type { Client } from '@/domain/client';
 import { getErrorMessage } from '@/common/utils/errorHelpers';
 import { getClientsOfMerchant, getClientById } from '@/common/components/MerchantClientsModal/Infraestructure/requests';

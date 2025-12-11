@@ -1,13 +1,15 @@
 "use client";
 
-import { Form, Input, Button } from 'antd';
+import { Form, Input, Button, Alert } from 'antd';
 import { useEffect, useState } from 'react';
-import type { Client } from '@/domain/client';
 import type { ClientFormValues, ClientFormProps } from './interface';
+import { createClient, updateClient } from '../Infrastructure/requests';
 
-const ClientForm: React.FC<ClientFormProps> = ({ initialValues, mode = 'create', loading = false, onSubmit }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ initialValues, mode = 'create', onSuccess, onClose, editingId }) => {
   const [form] = Form.useForm<ClientFormValues>();
   const [exampleIndex, setExampleIndex] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialValues) {
@@ -28,6 +30,31 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialValues, mode = 'create',
     });
     setExampleIndex((prev) => prev + 1);
   };
+
+  const onFinish = async (values: ClientFormValues) => {
+    setSubmitError(null);
+    setLoading(true);
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    try {
+      if (mode === 'create') {
+        await createClient(values, signal);
+      } else {
+        if (!editingId) throw new Error('Missing id for update');
+        await updateClient(editingId, values, signal);
+      }
+
+      onSuccess?.();
+      onClose?.();
+    } catch (err: unknown) {
+      // getErrorMessage handled in infra; err.message contains user friendly text
+      setSubmitError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       {/* Botón para rellenar datos de ejemplo */}
@@ -37,7 +64,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ initialValues, mode = 'create',
         </Button>
       </div>
 
-  <Form<ClientFormValues> form={form} layout="vertical" onFinish={(values) => onSubmit && onSubmit(values)}>
+  <Form<ClientFormValues> form={form} initialValues={initialValues} layout="vertical" onFinish={onFinish}>
+      {submitError && (
+        <div style={{ marginBottom: 12 }}>
+          <Alert type="error" message={submitError} />
+        </div>
+      )}
         <Form.Item
           name="name"
           label="Nombre"

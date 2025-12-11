@@ -4,6 +4,6 @@ export interface MerchantsTableProps {
   merchants: Merchant[];
   loading: boolean;
   onEdit: (merchant: Merchant) => void;
-  onDelete?: (merchant: Merchant) => void;
+  onDeleteSuccess?: () => void;
   onShowClient?: (merchant: Merchant) => void;
 }

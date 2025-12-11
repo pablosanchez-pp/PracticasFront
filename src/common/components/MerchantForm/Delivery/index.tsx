@@ -1,25 +1,26 @@
 "use client";
 
-import { Form, Input, Select, Button } from 'antd';
-import { useState } from 'react';
+import { Form, Input, Select, Button, Alert } from 'antd';
+import { useState, useEffect } from 'react';
 import { MERCHANT_TYPES } from '@/domain/merchant';
 import type { MerchantFormValues, MerchantFormProps } from './interface';
+import { createMerchant, updateMerchant } from '../Infrastructure/requests';
 
-const MerchantCreateForm: React.FC<MerchantFormProps> = ({ initialValues, mode = 'create', loading = false, onSubmit, onFillExample, handleFillExample: handleFillExampleProp }) => {
+const MerchantCreateForm: React.FC<MerchantFormProps> = ({ initialValues, mode = 'create', onSuccess, onClose, editingId }) => {
   const [form] = Form.useForm<MerchantFormValues>();
   const [exampleIndex, setExampleIndex] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialValues) {
+      form.setFieldsValue(initialValues);
+    } else {
+      form.resetFields();
+    }
+  }, [initialValues, form]);
 
   const handleFillExample = () => {
-    if (typeof handleFillExampleProp === 'function') {
-      handleFillExampleProp();
-      return;
-    }
-
-    if (typeof onFillExample === 'function') {
-      onFillExample();
-      return;
-    }
-
     const index = exampleIndex;
     form.setFieldsValue({
       name: `merchantEjemplo${index}`,
@@ -27,6 +28,27 @@ const MerchantCreateForm: React.FC<MerchantFormProps> = ({ initialValues, mode =
       merchantType: (MERCHANT_TYPES[0]?.value as string) ?? '',
     });
     setExampleIndex((p) => p + 1);
+  };
+
+  const onFinish = async (values: MerchantFormValues) => {
+    setError(null);
+    setLoading(true);
+    const controller = new AbortController();
+    const signal = controller.signal;
+    try {
+      if (mode === 'create') {
+        await createMerchant(values, signal);
+      } else {
+        if (!editingId) throw new Error('Missing id for update');
+        await updateMerchant(editingId, values, signal);
+      }
+      onSuccess?.();
+      onClose?.();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,7 +59,12 @@ const MerchantCreateForm: React.FC<MerchantFormProps> = ({ initialValues, mode =
         </Button>
       </div>
 
-  <Form<MerchantFormValues> form={form} initialValues={initialValues} layout="vertical" onFinish={(values) => onSubmit && onSubmit(values)}>
+  <Form<MerchantFormValues> form={form} initialValues={initialValues} layout="vertical" onFinish={onFinish}>
+      {error && (
+        <div style={{ marginBottom: 12 }}>
+          <Alert type="error" message={error} />
+        </div>
+      )}
       <Form.Item
         name="name"
         label="Name"
