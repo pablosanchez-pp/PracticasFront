@@ -10,7 +10,8 @@ import { Spin, Alert, Typography, Input, Button, Tooltip, Modal } from 'antd';
 import ClientsTable from '../components/ClientTable/Delivery';
 import { getErrorMessage, isAbortError } from '@/common/utils/errorHelpers';
 
-import ClientForm, { ClientFormValues } from '../components/ClientForm/Delivery';
+import ClientForm from '../components/ClientForm/Delivery';
+import { ClientFormValues } from '../components/ClientForm/Delivery/interface';
 import ClientMerchantsModal from '../components/ClientMerchantModal/Delivery';
 
 import { revalidatePage } from '@/common/utils/revalidatePath';

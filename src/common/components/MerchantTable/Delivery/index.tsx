@@ -6,13 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Merchant } from '@/domain/merchant';
 import { EditOutlined, DeleteOutlined, UserOutlined} from '@ant-design/icons';
 
-interface MerchantsTableProps {
-  merchants: Merchant[];
-  loading: boolean;
-  onEdit: (merchant: Merchant) => void;
-  onDelete?: (merchant: Merchant) => void;
-  onShowClient?: (merchant: Merchant) => void;
-}
+import { MerchantsTableProps } from './interface';
 
 const MerchantsTable: React.FC<MerchantsTableProps> = ({
   merchants,

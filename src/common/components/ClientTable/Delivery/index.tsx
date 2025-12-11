@@ -4,18 +4,7 @@ import { Table, Input, Button, Tooltip } from 'antd';
 import { DeleteOutlined, EditOutlined, ApartmentOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Client } from '@/domain/client';
-
-type ClientsTableProps = {
-  clients: Client[];
-  onEdit: (client: Client) => void;
-  onDelete: (id: string) => void;
-  onOpenMerchants: (client: Client) => void;
-  // Email search controls (the name search input stays in the page header)
-  searchEmail: string;
-  onEmailChange: (value: string) => void;
-  onEmailPressEnter: () => void;
-  onEmailClear: () => void;
-};
+import type { ClientsTableProps } from './interface';
 
 const ClientsTable = ({
   clients,

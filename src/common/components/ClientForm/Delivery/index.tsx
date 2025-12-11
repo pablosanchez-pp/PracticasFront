@@ -1,20 +1,9 @@
-'use client';
+"use client";
 
 import { Form, Input, Button } from 'antd';
 import { useEffect, useState } from 'react';
 import type { Client } from '@/domain/client';
-
-export type ClientFormValues = Pick<
-  Client,
-  'name' | 'surname' | 'email' | 'phone' | 'cifNifNie'
->;
-
-interface ClientFormProps {
-  initialValues?: ClientFormValues;
-  mode?: 'create' | 'edit';
-  loading?: boolean;
-  onSubmit?: (values: ClientFormValues) => void;
-}
+import type { ClientFormValues, ClientFormProps } from './interface';
 
 const ClientForm: React.FC<ClientFormProps> = ({ initialValues, mode = 'create', loading = false, onSubmit }) => {
   const [form] = Form.useForm<ClientFormValues>();

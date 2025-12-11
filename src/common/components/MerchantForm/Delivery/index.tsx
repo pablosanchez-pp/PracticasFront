@@ -1,40 +1,15 @@
-'use client';
+"use client";
 
 import { Form, Input, Select, Button } from 'antd';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { MERCHANT_TYPES } from '@/domain/merchant';
-import type { FormInstance } from 'antd/es/form';
-
-export type MerchantFormValues = {
-  name: string;
-  address: string;
-  merchantType: string;
-};
-
-interface MerchantFormProps {
-  initialValues?: MerchantFormValues;
-  mode?: 'create' | 'edit';
-  loading?: boolean;
-  onSubmit?: (values: MerchantFormValues) => void;
-  onFillExample?: () => void;
-  // Some pages use the name `handleFillExample` — accept that too as an alias.
-  handleFillExample?: () => void;
-}
+import type { MerchantFormValues, MerchantFormProps } from './interface';
 
 const MerchantCreateForm: React.FC<MerchantFormProps> = ({ initialValues, mode = 'create', loading = false, onSubmit, onFillExample, handleFillExample: handleFillExampleProp }) => {
   const [form] = Form.useForm<MerchantFormValues>();
   const [exampleIndex, setExampleIndex] = useState(1);
 
-  useEffect(() => {
-    if (initialValues) {
-      form.setFieldsValue(initialValues);
-    } else {
-      form.resetFields();
-    }
-  }, [initialValues, form]);
-
   const handleFillExample = () => {
-    // If parent provided a handler, prefer that so pages can control example data
     if (typeof handleFillExampleProp === 'function') {
       handleFillExampleProp();
       return;
@@ -62,7 +37,7 @@ const MerchantCreateForm: React.FC<MerchantFormProps> = ({ initialValues, mode =
         </Button>
       </div>
 
-      <Form<MerchantFormValues> form={form} layout="vertical" onFinish={(values) => onSubmit && onSubmit(values)}>
+  <Form<MerchantFormValues> form={form} initialValues={initialValues} layout="vertical" onFinish={(values) => onSubmit && onSubmit(values)}>
       <Form.Item
         name="name"
         label="Name"

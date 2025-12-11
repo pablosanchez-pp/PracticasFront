@@ -6,12 +6,7 @@ import type { Merchant } from '@/domain/merchant';
 import type { Client } from '@/domain/client';
 import { getErrorMessage } from '@/common/utils/errorHelpers';
 import { getClientsOfMerchant, getClientById } from '@/common/components/MerchantClientsModal/Infraestructure/requests';
-
-interface MerchantClientsModalProps {
-  open: boolean;
-  merchant: Merchant | null;
-  onClose: () => void;
-}
+import type { MerchantClientsModalProps } from './interface';
 
 const MerchantClientsModal: React.FC<MerchantClientsModalProps> = ({ open, merchant, onClose }) => {
   const [loading, setLoading] = useState(false);

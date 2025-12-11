@@ -4,18 +4,13 @@ import { useEffect, useState } from 'react';
 import { Modal, Spin, Select, Button, Alert } from 'antd';
 import type { Client } from '@/domain/client';
 import type { Merchant } from '@/domain/merchant';
+import type { ClientMerchantsModalProps } from './interface';
 import {
   listClientMerchants,
   listAllMerchants,
   linkClientToMerchant,
 } from '@/common/components/ClientMerchantModal/Infraestructure/requests';
 import { getErrorMessage } from '@/common/utils/errorHelpers';
-
-interface ClientMerchantsModalProps {
-  open: boolean;
-  client: Client | null;
-  onClose: () => void;
-}
 
 const ClientMerchantsModal: React.FC<ClientMerchantsModalProps> = ({ open, client, onClose }) => {
   const [clientMerchants, setClientMerchants] = useState<string[]>([]);
