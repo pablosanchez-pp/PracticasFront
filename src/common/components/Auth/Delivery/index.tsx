@@ -1,5 +1,6 @@
 "use client";
 
+import Link from 'next/link';
 import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
@@ -20,8 +21,8 @@ export function LoginDelivery() {
         sessionStorage.setItem('loggedIn', '1');
         if (resp && resp.id) sessionStorage.setItem('USER_ID', String(resp.id));
         if (resp && resp.username) sessionStorage.setItem('USERNAME', String(resp.username));
-      } catch {}
-      router.replace('/');
+  } catch {}
+  router.replace('/home');
     } catch (err: unknown) {
       hide();
       message.error((err as Error)?.message ?? 'Error en login');
@@ -50,10 +51,12 @@ export function LoginDelivery() {
               Entrar
             </Button>
           </Form.Item>
-          <div style={{ textAlign: 'center', marginTop: 8 }}>
-            <Button type="link" onClick={() => router.push('/register')}>¿No tienes cuenta? Registrarse</Button>
-          </div>
         </Form>
+
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          {/* Use a real anchor so click always navigates to /register */}
+          <Button type="link" href="/register">¿No tienes cuenta? Registrarse</Button>
+        </div>
 
       </Card>
     </div>
@@ -77,10 +80,10 @@ export function RegisterDelivery() {
           if (loginResp && loginResp.id) sessionStorage.setItem('USER_ID', String(loginResp.id));
           if (loginResp && loginResp.username) sessionStorage.setItem('USERNAME', String(loginResp.username));
         } catch {}
-        router.replace('/');
+        router.replace('/home');
       } catch (loginErr: unknown) {
         message.warning('Registro OK, pero no se pudo iniciar sesión automáticamente. Por favor inicia sesión.');
-        router.replace('/login');
+        try { router.replace('/'); } catch { window.location.href = '/'; }
       }
     } catch (err: unknown) {
       hide();
@@ -110,10 +113,11 @@ export function RegisterDelivery() {
               Registrarse
             </Button>
           </Form.Item>
-          <div style={{ textAlign: 'center', marginTop: 8 }}>
-            <Button type="link" onClick={() => router.push('/login')}>¿Ya tienes cuenta? Iniciar sesión</Button>
-          </div>
         </Form>
+
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <Button type="link" href="/">¿Ya tienes cuenta? Iniciar sesión</Button>
+        </div>
 
       </Card>
     </div>

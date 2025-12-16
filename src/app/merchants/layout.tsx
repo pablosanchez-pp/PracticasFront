@@ -9,12 +9,12 @@ export default function MerchantsLayout({
     <div className="min-h-screen flex flex-col">
       <header className="w-full border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold">
+          <Link href="/home" className="text-lg font-semibold">
             Demo frontend
           </Link>
 
           <nav className="flex gap-4 text-sm text-slate-300">
-            <Link href="/" className="hover:text-blue-400 transition">
+            <Link href="/home" className="hover:text-blue-400 transition">
               Inicio
             </Link>
           </nav>
