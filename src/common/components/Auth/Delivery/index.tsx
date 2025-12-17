@@ -18,9 +18,21 @@ export function LoginDelivery() {
       hide();
       message.success('Login correcto');
       try {
+        // store session info and token for later requests
         sessionStorage.setItem('loggedIn', '1');
         if (resp && resp.id) sessionStorage.setItem('USER_ID', String(resp.id));
         if (resp && resp.username) sessionStorage.setItem('USERNAME', String(resp.username));
+        if (resp && resp.token) {
+          try { sessionStorage.setItem('TOKEN', String(resp.token)); } catch {}
+          // set an httpOnly cookie server-side for middleware to read securely
+          try {
+            fetch('/api/auth/set-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: resp.token }),
+            }).catch(() => {});
+          } catch {}
+        }
   } catch {}
   router.replace('/home');
     } catch (err: unknown) {
@@ -76,9 +88,20 @@ export function RegisterDelivery() {
       try {
         const loginResp: any = await loginUser(values);
         try {
+          // store session info and token
           sessionStorage.setItem('loggedIn', '1');
           if (loginResp && loginResp.id) sessionStorage.setItem('USER_ID', String(loginResp.id));
           if (loginResp && loginResp.username) sessionStorage.setItem('USERNAME', String(loginResp.username));
+          if (loginResp && loginResp.token) {
+            try { sessionStorage.setItem('TOKEN', String(loginResp.token)); } catch {}
+            try {
+              fetch('/api/auth/set-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: loginResp.token }),
+              }).catch(() => {});
+            } catch {}
+          }
         } catch {}
         router.replace('/home');
       } catch (loginErr: unknown) {

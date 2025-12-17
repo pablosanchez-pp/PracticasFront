@@ -1,8 +1,6 @@
 import Service from '@/service/src';
 import type { Client } from '@/domain/client';
 
-const JWT = process.env.NEXT_PUBLIC_JWT;
-
 export async function getClientsOfMerchant(merchantId: string): Promise<string[] | string | null> {
   const controller = new AbortController();
   const signal = controller.signal;
@@ -10,7 +8,7 @@ export async function getClientsOfMerchant(merchantId: string): Promise<string[]
     const res = await Service.getCases('getClientOfMerchant', {
       signal,
       endPointData: { merchantId },
-      token: JWT,
+      token: undefined,
     });
 
     if (res == null) return null;
@@ -41,7 +39,7 @@ export async function getClientById(id: string): Promise<Client | null> {
   const res = await Service.getCases('getClientById', {
     signal,
     endPointData: { id },
-    token: JWT,
+    token: undefined,
   });
 
   return (res as Client) ?? null;

@@ -39,12 +39,18 @@ export async function registerUser(values: RegisterValues, signal?: AbortSignal)
 
 export async function logoutUser(id: string, signal?: AbortSignal) {
   try {
-    const jwt = process.env.NEXT_PUBLIC_JWT;
+    // Let manageRequest resolve the per-user token (from sessionStorage or cookie)
     const res = await Service.getCases('logoutUser', {
       signal,
       endPointData: { id },
-      token: jwt,
+      token: undefined,
     });
+
+    // Also clear server-side httpOnly cookie (best-effort)
+    try {
+      fetch('/api/auth/clear-token', { method: 'POST' }).catch(() => {});
+    } catch {}
+
     return res;
   } catch (err: unknown) {
     throw new Error(getErrorMessage(err, 'Error cerrando sesión'));

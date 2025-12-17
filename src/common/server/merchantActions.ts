@@ -7,12 +7,12 @@ const SERVER_JWT = process.env.BACKEND_JWT ?? process.env.NEXT_PUBLIC_JWT;
 
 type ListParams = Record<string, unknown> | undefined;
 
-export async function listMerchants(params?: ListParams): Promise<Merchant[]> {
+export async function listMerchants(params?: ListParams, token?: string): Promise<Merchant[]> {
   try {
     const res = await Service.getCases('getMerchant', {
       signal: undefined,
       endPointData: params ?? {},
-      token: SERVER_JWT,
+      token: token ?? SERVER_JWT,
     });
 
     return Array.isArray(res) ? (res as Merchant[]) : [];
@@ -22,12 +22,12 @@ export async function listMerchants(params?: ListParams): Promise<Merchant[]> {
   }
 }
 
-export async function getMerchantById(id: string): Promise<Merchant | null> {
+export async function getMerchantById(id: string, token?: string): Promise<Merchant | null> {
   try {
     const res = await Service.getCases('getMerchantById', {
       signal: undefined,
       endPointData: { id },
-      token: SERVER_JWT,
+      token: token ?? SERVER_JWT,
     });
 
     return (res as Merchant) ?? null;
@@ -37,12 +37,12 @@ export async function getMerchantById(id: string): Promise<Merchant | null> {
   }
 }
 
-export async function getMerchantsByName(query: string): Promise<Merchant[]> {
+export async function getMerchantsByName(query: string, token?: string): Promise<Merchant[]> {
   try {
     const res = await Service.getCases('getMerchantByName', {
       signal: undefined,
       endPointData: { nombre: query },
-      token: SERVER_JWT,
+      token: token ?? SERVER_JWT,
     });
 
     return Array.isArray(res) ? (res as Merchant[]) : [];
@@ -52,12 +52,12 @@ export async function getMerchantsByName(query: string): Promise<Merchant[]> {
   }
 }
 
-export async function getClientsOfMerchant(merchantId: string): Promise<string[] | string | null> {
+export async function getClientsOfMerchant(merchantId: string, token?: string): Promise<string[] | string | null> {
   try {
     const res = await Service.getCases('getClientOfMerchant', {
       signal: undefined,
       endPointData: { merchantId },
-      token: SERVER_JWT,
+      token: token ?? SERVER_JWT,
     });
 
     if (res == null) 

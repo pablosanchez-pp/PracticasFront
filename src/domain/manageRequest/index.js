@@ -31,13 +31,56 @@ const manageRequest = async (
   commonBody = true,
 ) => {
   try {
+    // Resolve token: prefer explicit parameter, otherwise try to read from browser storage/cookie
+    let resolvedToken = token;
+    try {
+      if (!resolvedToken && typeof window !== 'undefined') {
+        const sess = sessionStorage.getItem('TOKEN');
+        if (sess) resolvedToken = sess;
+        else {
+          const m = document.cookie.match(/(?:^|; )token=([^;]+)/);
+          if (m && m[1]) resolvedToken = decodeURIComponent(m[1]);
+        }
+      }
+
+      // If the resolved token matches a legacy/global build-time token or a known dummy
+      // value, clear it from storage so we don't keep using the old hardcoded token.
+      try {
+        const legacy = typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_JWT : undefined;
+        if (resolvedToken && (resolvedToken === legacy || String(resolvedToken).includes('DummySignature'))) {
+          try { sessionStorage.removeItem('TOKEN'); } catch (e) {}
+          try { document.cookie = 'token=; path=/; max-age=0'; } catch (e) {}
+          resolvedToken = undefined;
+        }
+      } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
+
+    const authHeader = resolvedToken
+      ? resolvedToken.startsWith('Bearer ')
+        ? resolvedToken
+        : `Bearer ${resolvedToken}`
+      : undefined;
+
+    // DEBUG: show which token was resolved for this request (development only)
+    try {
+      // mask token a bit to avoid huge logs, but show full for troubleshooting if needed
+      const masked = resolvedToken
+        ? `${String(resolvedToken).slice(0, 12)}...${String(resolvedToken).slice(-8)}`
+        : null;
+      // eslint-disable-next-line no-console
+      console.debug('[manageRequest] request=', requestString, 'resolvedToken=', masked);
+    } catch (e) {}
+
     let fetchConfig = {
       signal,
       method,
       cache,
-      headers: token
+      credentials: 'same-origin',
+      headers: authHeader
         ? {
-            Authorization: `Bearer ${token}`,
+            Authorization: authHeader,
             ...headers,
           }
         : { ...headers },

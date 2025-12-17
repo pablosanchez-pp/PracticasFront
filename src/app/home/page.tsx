@@ -11,6 +11,7 @@ const { Title, Paragraph } = Typography;
 export default function HomePage() {
   const router = useRouter();
   const [logged, setLogged] = useState<boolean>(false);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -21,6 +22,14 @@ export default function HomePage() {
         return;
       }
       setLogged(true);
+      try {
+        const t = sessionStorage.getItem('TOKEN');
+        if (t) setToken(t);
+        else {
+          const m = document.cookie.match(/(?:^|; )token=([^;]+)/);
+          if (m && m[1]) setToken(decodeURIComponent(m[1]));
+        }
+      } catch {}
     } catch (e) {
       router.replace('/');
     }
@@ -39,6 +48,8 @@ export default function HomePage() {
     try { sessionStorage.removeItem('loggedIn'); } catch (e) {}
     try { sessionStorage.removeItem('USER_ID'); } catch {}
     try { sessionStorage.removeItem('USERNAME'); } catch {}
+  try { sessionStorage.removeItem('TOKEN'); } catch {}
+  try { document.cookie = 'token=; path=/; max-age=0'; } catch {}
     // go to login at '/'
     router.replace('/');
   };
@@ -83,6 +94,34 @@ export default function HomePage() {
               </Space>
             </div>
           </div>
+          {token && (
+            <div className="mt-6">
+              <Card size="small" className="bg-slate-800 border-slate-700" bodyStyle={{ padding: 12 }}>
+                <div className="flex items-start justify-between gap-4">
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#cbd5e1' }}>{token}</pre>
+                  <div>
+                    <Button
+                      onClick={() => {
+                        try {
+                          navigator.clipboard.writeText(token ?? '');
+                        } catch (e) {
+                          // fallback
+                          const ta = document.createElement('textarea');
+                          ta.value = token ?? '';
+                          document.body.appendChild(ta);
+                          ta.select();
+                          document.execCommand('copy');
+                          ta.remove();
+                        }
+                      }}
+                    >
+                      Copiar token
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
         </Card>
       </div>
     </div>
